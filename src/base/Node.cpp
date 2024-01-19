@@ -12,6 +12,8 @@
 
 #include <cmath>
 #include <iostream>
+#include <sstream>
+#include <string>
 
 #include "MinotaurConfig.h"
 #include "Branch.h"
@@ -83,6 +85,41 @@ Node::~Node()
   children_.clear();
 }
 
+std::string Node::serialize()
+{
+  // returns an std string  
+  // stuff that is required to reconstruct a Node:
+  // id_
+  // lb_
+  // pMods_
+  // rMods_
+  // brCands_
+  // pseudoDown_
+  // pseudoUp_
+  // vioVal_
+  // tbScore_
+  // cutPool_
+  // timesDown_
+  // timesUp_
+
+  std::ostringstream ret_sstream;
+
+  ret_sstream << id_ << lb_;
+  
+  ret_sstream << pMods_.size();
+  for ( auto modptr : pMods_ )
+  {
+    ret_sstream << *mod;
+  }
+  
+  ret_sstream << rMods_.size();
+  for ( auto modptr : rMods_ )
+  {
+    ret_sstream << *mod;
+  }
+
+  return ret_sstream.str();
+}
 
 void Node::addChild(NodePtr childNode)
 {

@@ -48,6 +48,22 @@ VarBoundMod::~VarBoundMod()
   var_= 0;
 }
 
+std::string VarBoundMod::serialize()
+{
+  std::ostringstream ret_sstream;
+
+  ret_sstream << newLb_ << newUb_ << oldLb_ << oldUb_;
+
+  ret_sstream << var_->getId();
+
+  return ret_sstream.str();
+}
+
+std::ostringstream& operator<< (std::ostringstream& out, const VarBoundMod& mod)
+{
+  out << mod.serialize(); 
+  return out;
+}
 
 ModificationPtr VarBoundMod::fromRel(RelaxationPtr rel, ProblemPtr) const
 {

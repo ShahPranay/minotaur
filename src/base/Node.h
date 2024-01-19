@@ -329,6 +329,9 @@ namespace Minotaur {
     ///Write the node
     void write(std::ostream &o) const;
 
+    // serializes the Node object into a string that can be used to reconstruct the object.
+    std::string serialize();
+
   private:   
     /**
      * The branching constraints that were used to create this node from its

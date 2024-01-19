@@ -113,6 +113,10 @@ class VarBoundMod2 : public Modification {
   // Implement Modification::write().
   void write(std::ostream&) const {};
 
+  friend std::ostringstream& operator<< (std::ostringstream& out, const VarBoundMod& mod);
+
+  std::string serialize();
+
  private:
   /// The new lower bound.
   double newLb_;
