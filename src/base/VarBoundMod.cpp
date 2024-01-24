@@ -12,6 +12,8 @@
  */
 
 #include <iostream>
+#include <sstream>
+#include <string>
 
 #include "MinotaurConfig.h"
 #include "Engine.h"
@@ -52,17 +54,11 @@ std::string VarBoundMod::serialize()
 {
   std::ostringstream ret_sstream;
 
-  ret_sstream << newLb_ << newUb_ << oldLb_ << oldUb_;
-
   ret_sstream << var_->getId();
 
-  return ret_sstream.str();
-}
+  ret_sstream << lu_ << newVal_ << oldVal_;
 
-std::ostringstream& operator<< (std::ostringstream& out, const VarBoundMod& mod)
-{
-  out << mod.serialize(); 
-  return out;
+  return ret_sstream.str();
 }
 
 ModificationPtr VarBoundMod::fromRel(RelaxationPtr rel, ProblemPtr) const

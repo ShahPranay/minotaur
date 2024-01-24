@@ -62,6 +62,9 @@ namespace Minotaur {
 
       /// Write it to 'out'.
       virtual void write(std::ostream &out) const = 0;
+
+      // default funtion definition, will need to be implemented for all derived classes. done for {varboundmod}
+      virtual std::string serialize() {return "";};
   };   
 
 }

@@ -109,13 +109,13 @@ std::string Node::serialize()
   ret_sstream << pMods_.size();
   for ( auto modptr : pMods_ )
   {
-    ret_sstream << *mod;
+    ret_sstream << (*modptr).serialize();
   }
   
   ret_sstream << rMods_.size();
   for ( auto modptr : rMods_ )
   {
-    ret_sstream << *mod;
+    ret_sstream << (*modptr).serialize();
   }
 
   return ret_sstream.str();

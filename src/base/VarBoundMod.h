@@ -59,6 +59,8 @@ class VarBoundMod : public Modification {
   // Implement Modification::write().
   void write(std::ostream& out) const;
 
+  virtual std::string serialize();
+
  private:
   /// Lower or upper bound.
   BoundType lu_;
@@ -113,9 +115,6 @@ class VarBoundMod2 : public Modification {
   // Implement Modification::write().
   void write(std::ostream&) const {};
 
-  friend std::ostringstream& operator<< (std::ostringstream& out, const VarBoundMod& mod);
-
-  std::string serialize();
 
  private:
   /// The new lower bound.

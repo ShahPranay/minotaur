@@ -1,0 +1,4 @@
+*
+!.gitignore
+!build_third_party
+!clean_third_party
