@@ -21,6 +21,7 @@ set (MINOTAUR_SOURCES
      PerspRefUT.cpp
      PolyUT.cpp
      QuadraticFunctionUT.cpp
+     SerializeUT.cpp
      TimerUT.cpp 
 )
 

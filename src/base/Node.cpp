@@ -104,6 +104,8 @@ std::string Node::serialize()
 
   std::ostringstream ret_sstream;
 
+  ret_sstream << branch_->serialize();
+
   ret_sstream << id_ << lb_;
   
   ret_sstream << pMods_.size();

@@ -12,6 +12,8 @@
 
 #include <cmath>
 #include <iostream>
+#include <sstream>
+#include <string>
 
 #include "MinotaurConfig.h"
 #include "BrCand.h"
@@ -55,6 +57,29 @@ Branch::~Branch()
       brCand_->decrBranches();
     }
   }
+}
+
+std::string Branch::serialize()
+{
+  std::ostringstream ret_sstream;
+
+  ret_sstream << me_;
+
+  ret_sstream << pMods_.size();
+  for(auto modptr: pMods_)
+  {
+    ret_sstream << modptr->serialize();
+  }
+
+  ret_sstream << rMods_.size();
+  for(auto modptr: rMods_)
+  {
+    ret_sstream << modptr->serialize();
+  }
+
+  ret_sstream << activity_;
+
+  return ret_sstream.str();
 }
 
 

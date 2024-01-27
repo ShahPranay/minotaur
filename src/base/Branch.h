@@ -122,6 +122,8 @@ public:
   /// Write the branch to 'out'
   void write(std::ostream &out) const;
 
+  std::string serialize();
+
 protected:
   /// Name.
   const static std::string me_; 
