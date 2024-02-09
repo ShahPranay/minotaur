@@ -66,6 +66,11 @@ namespace Minotaur {
     /// Default destructor.
     virtual ~Node();
 
+    /**
+     * Check equality (equivalance) of two Node objects. Implemented for testing purposes
+     */ 
+    bool operator==(const Node &otherNode) const;
+
     /// Add a child node.
     void addChild(NodePtr childNode);
 
@@ -328,9 +333,6 @@ namespace Minotaur {
 
     ///Write the node
     void write(std::ostream &o) const;
-
-    // serializes the Node object into a string that can be used to reconstruct the object.
-    std::string serialize();
 
   private:   
     /**

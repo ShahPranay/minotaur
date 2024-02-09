@@ -25,18 +25,18 @@ public:
   SerializeUT(std::string name) : TestCase(name) {}
   SerializeUT() {}
 
-  void serialize_node();
+  void test_serialize_reconstruct();
   void setUp();      // need not implement
   void tearDown();   // need not implement
 
   CPPUNIT_TEST_SUITE(SerializeUT);
-  CPPUNIT_TEST(serialize_node);
+  CPPUNIT_TEST(test_serialize_reconstruct);
   CPPUNIT_TEST_SUITE_END();
 
 private:
   EnvPtr env_;
   ProblemPtr instance_;
-  NodePtr mynode_;
+  NodePtr mynode_, par_;
 };
 
 #endif

@@ -8,12 +8,13 @@
 #include <string>
 #include <iostream>
 
+#include <Types.h>
 #include "MinotaurConfig.h"
 #include "Environment.h"
 #include "LinearFunction.h"
 #include "Branch.h"
 #include "Node.h"
-#include <Types.h>
+#include "Serializer.h"
 #include "Variable.h"
 #include "ProblemSize.h"
 #include "SerializeUT.h"
@@ -34,23 +35,37 @@ void SerializeUT::setUp()
   vars.push_back(instance_->newVariable(0.0, 3.0, Integer));
 
   BranchPtr br = new Branch();
-  NodePtr par = new Node();
-  mynode_ = new Node(par, br); 
-  ModificationPtr mod1 = new VarBoundMod(vars[0], BoundType::Lower, -1);
+  ModificationPtr mod1 = new VarBoundMod(vars[1], BoundType::Upper, 2);
+  br->addRMod(mod1);
 
-  mynode_->addPMod(mod1);
+  par_ = new Node();
+  mynode_ = new Node(par_, br); 
+  ModificationPtr mod2 = new VarBoundMod(vars[0], BoundType::Lower, -1);
+
+  mynode_->addRMod(mod1);
+  mynode_->setId(69);
+  
 }
 
-void SerializeUT::serialize_node()
+void SerializeUT::test_serialize_reconstruct()
 {
-  std::string str =  mynode_->serialize();
+  Serializer cereal;
+
+  cereal.writeNode(mynode_);
+  std::string cpy = cereal.get_string();
+
+  DeSerializer des(cpy);
+
+  NodePtr newnode = des.readNode(instance_, par_);
+
+  CPPUNIT_ASSERT((*newnode) == (*mynode_));
+
 }
 
 void SerializeUT::tearDown()
 {
   delete instance_;
   delete env_;
-  delete mynode_;
 }
 
 // Local Variables: 

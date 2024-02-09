@@ -12,11 +12,10 @@
 
 #include <cmath>
 #include <iostream>
-#include <sstream>
-#include <string>
 
 #include "MinotaurConfig.h"
 #include "BrCand.h"
+#include "VarBoundMod.h"
 #include "Branch.h"
 #include "Modification.h"
 #include "Operations.h"
@@ -34,7 +33,6 @@ Branch::Branch()
 {
 
 }
-
 
 Branch::~Branch()
 {
@@ -59,27 +57,25 @@ Branch::~Branch()
   }
 }
 
-std::string Branch::serialize()
-{
-  std::ostringstream ret_sstream;
+/**
+ * Tentative implementation, checks whether all modifications are equal or not
+ */
+bool Branch::operator==(const Branch &otherBranch) const {
+  bool res = true; 
 
-  ret_sstream << me_;
+  res = (activity_ == otherBranch.activity_);
 
-  ret_sstream << pMods_.size();
-  for(auto modptr: pMods_)
+  res = res && (rMods_.size() == otherBranch.rMods_.size());
+
+  if(!res)
+    return res;
+
+  for( size_t i = 0; i < rMods_.size(); i++ )
   {
-    ret_sstream << modptr->serialize();
+    res = res && (*rMods_[i] == *otherBranch.rMods_[i]);
   }
 
-  ret_sstream << rMods_.size();
-  for(auto modptr: rMods_)
-  {
-    ret_sstream << modptr->serialize();
-  }
-
-  ret_sstream << activity_;
-
-  return ret_sstream.str();
+  return res;
 }
 
 

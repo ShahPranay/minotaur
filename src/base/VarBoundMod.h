@@ -35,6 +35,16 @@ class VarBoundMod : public Modification {
   /// Destroy.
   ~VarBoundMod();
 
+  /**
+   * Check equality (equivalance) of VarBoundMod object to a Modification object. Implemented for testing purposes
+   */ 
+  virtual bool operator==(const Modification &otherMod) const;
+
+  /**
+   * Check equality (equivalance) of two VarBoundMod objects. Implemented for testing purposes
+   */ 
+  bool operator==(const VarBoundMod &otherMod) const;
+
   // base class method.
   ModificationPtr fromRel(RelaxationPtr, ProblemPtr) const;
 
@@ -50,6 +60,10 @@ class VarBoundMod : public Modification {
   /// Get new value of the bound.
   double getNewVal() const;
 
+  double getOldVal() const;
+
+  void setOldVal(double oldval);
+
   // Implement Modification::applyToProblem().
   void applyToProblem(ProblemPtr problem);
 
@@ -58,8 +72,6 @@ class VarBoundMod : public Modification {
 
   // Implement Modification::write().
   void write(std::ostream& out) const;
-
-  virtual std::string serialize();
 
  private:
   /// Lower or upper bound.

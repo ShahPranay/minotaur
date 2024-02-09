@@ -12,8 +12,6 @@
  */
 
 #include <iostream>
-#include <sstream>
-#include <string>
 
 #include "MinotaurConfig.h"
 #include "Engine.h"
@@ -44,21 +42,31 @@ VarBoundMod::VarBoundMod(VariablePtr var, BoundType lu, double new_val)
   //std::cout << "varboundmod: old value = " << oldVal_ << std::endl;
 }
 
-
 VarBoundMod::~VarBoundMod()
 {
   var_= 0;
 }
 
-std::string VarBoundMod::serialize()
+/**
+ * Tentative implementation
+ */
+bool VarBoundMod::operator==(const Modification &otherMod) const {
+  const VarBoundMod * other_vbm = dynamic_cast<const VarBoundMod *>(&otherMod);
+  
+  if(!other_vbm)
+    return false;
+  else return (*this == *other_vbm);
+}
+
+/**
+ * Tentative implementation
+ */
+bool VarBoundMod::operator==(const VarBoundMod &otherMod) const 
 {
-  std::ostringstream ret_sstream;
-
-  ret_sstream << var_->getId();
-
-  ret_sstream << lu_ << newVal_ << oldVal_;
-
-  return ret_sstream.str();
+  return (var_->getId() == otherMod.var_->getId()) && 
+    (lu_ == otherMod.lu_) && 
+    (newVal_ == otherMod.newVal_) &&
+    (oldVal_ == otherMod.oldVal_);
 }
 
 ModificationPtr VarBoundMod::fromRel(RelaxationPtr rel, ProblemPtr) const
@@ -88,6 +96,15 @@ double VarBoundMod::getNewVal() const
   return newVal_;
 }
 
+double VarBoundMod::getOldVal() const
+{
+  return oldVal_;
+}
+
+void VarBoundMod::setOldVal(double oldval)
+{
+  oldVal_ = oldval;
+}
 
 void VarBoundMod::applyToProblem(ProblemPtr problem) 
 {

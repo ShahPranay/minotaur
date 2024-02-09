@@ -12,8 +12,6 @@
 
 #include <cmath>
 #include <iostream>
-#include <sstream>
-#include <string>
 
 #include "MinotaurConfig.h"
 #include "Branch.h"
@@ -62,7 +60,6 @@ Node::Node(NodePtr parentNode, BranchPtr branch)
   lb_ = parentNode->getLb();
 }
 
-
 Node::~Node()
 {
   removeWarmStart();
@@ -85,42 +82,28 @@ Node::~Node()
   children_.clear();
 }
 
-std::string Node::serialize()
-{
-  // returns an std string  
-  // stuff that is required to reconstruct a Node:
-  // id_
-  // lb_
-  // pMods_
-  // rMods_
-  // brCands_
-  // pseudoDown_
-  // pseudoUp_
-  // vioVal_
-  // tbScore_
-  // cutPool_
-  // timesDown_
-  // timesUp_
+/**
+ * Tentative implementation, checks whether all modifications are equal or not
+ */
+bool Node::operator==(const Node &otherNode) const {
+  bool res = true; 
 
-  std::ostringstream ret_sstream;
+  res = res && (*branch_ == *otherNode.branch_);
 
-  ret_sstream << branch_->serialize();
+  res = res && (id_ == otherNode.id_) && (lb_ && otherNode.lb_);
 
-  ret_sstream << id_ << lb_;
+  res = res && (rMods_.size() == otherNode.rMods_.size());
   
-  ret_sstream << pMods_.size();
-  for ( auto modptr : pMods_ )
+
+  if(!res)
+    return false;
+
+  for(size_t i = 0; i < rMods_.size(); i++)
   {
-    ret_sstream << (*modptr).serialize();
-  }
-  
-  ret_sstream << rMods_.size();
-  for ( auto modptr : rMods_ )
-  {
-    ret_sstream << (*modptr).serialize();
+    res = res && (*rMods_[i] == *otherNode.rMods_[i]);
   }
 
-  return ret_sstream.str();
+  return res;
 }
 
 void Node::addChild(NodePtr childNode)

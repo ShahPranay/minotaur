@@ -39,6 +39,11 @@ public:
   ~Branch();
 
   /**
+   * Check equality (equivalance) of two Branch objects. Implemented for testing purposes
+   */ 
+  bool operator==(const Branch &otherBranch) const;
+
+  /**
    * \brief Add a problem modification to the current vector of modifications
    * associated with this branch.
    * \param[in] mod The modification that must be added to the child node.
@@ -121,8 +126,6 @@ public:
 
   /// Write the branch to 'out'
   void write(std::ostream &out) const;
-
-  std::string serialize();
 
 protected:
   /// Name.

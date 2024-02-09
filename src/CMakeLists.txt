@@ -118,6 +118,7 @@ set (MINOTAUR_SOURCES
      base/ReliabilityBrancher.cpp 
      base/Reader.cpp 
      base/SecantMod.cpp 
+     base/Serializer.cpp
      base/SimpleCutMan.cpp 
      base/SimpleTransformer.cpp
      base/SimplexQuadCutGen.cpp
@@ -259,6 +260,7 @@ set (MINOTAUR_HEADERS
      base/Relaxation.h
      base/ReliabilityBrancher.h
      base/SecantMod.h
+     base/Serializer.h
      base/SimpleCutMan.h 
      base/SimpleTransformer.h
      base/SimplexQuadCutGen.h
