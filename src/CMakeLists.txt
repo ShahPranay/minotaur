@@ -496,11 +496,14 @@ if (IFACE_SOURCES)
   install(TARGETS mmultistart RUNTIME DESTINATION bin)
   set_target_properties(mmultistart PROPERTIES INSTALL_RPATH "${MNTR_INSTALL_RPATH}")
  
-  #add_executable(mqgmpi solvers/QGMpi.cpp)
-  #target_link_libraries(mqgmpi ${ALL_EXEC_LIBS})
-  #install(TARGETS mqgmpi RUNTIME DESTINATION bin)
-  #set_target_properties(mqgmpi PROPERTIES INSTALL_RPATH "${MNTR_INSTALL_RPATH}")
- 
+endif()
+
+if(${MPI_FOUND})
+  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+  add_executable(mqgmpi solvers/QGMpi.cpp)
+  target_link_libraries(mqgmpi ${ALL_EXEC_LIBS} ${MPI_CXX_LIBRARIES})
+  install(TARGETS mqgmpi RUNTIME DESTINATION bin)
+  set_target_properties(mqgmpi PROPERTIES INSTALL_RPATH "${MNTR_INSTALL_RPATH}")
 endif()
 
 install(FILES ${ENGFAC_HEADERS} DESTINATION include/minotaur)
