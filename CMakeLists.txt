@@ -105,7 +105,7 @@ if(MPI_FOUND)
   message(STATUS ${MSG_HEAD} "MPI support detected.")
 else()
   message(FATAL_ERROR
-      ${MSG_HEAD} "MPI is required, but was not found")
+  ${MSG_HEAD} "MPI is required, but was not found")
 endif()
 
 ###########################################################################

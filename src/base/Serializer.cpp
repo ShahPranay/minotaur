@@ -25,13 +25,22 @@ std::string Serializer::get_string()
 
 void Serializer::writeNode(NodePtr node)
 {
+  // need to remove/ update this
   writeBranch(node->getBranch());
 
   writeArith(node->getId());
   writeArith(node->getLb());
 
+  std::vector<NodePtr> ancestors;
+  NodePtr curNode = node;
+  while(curNode)
+  {
+    ancestors.push_back(curNode);
+    curNode = curNode->getParent();
+  }
   
-  writeMods(node->modsrBegin(), node->modsrEnd());
+  for(int i = ancestors.size() - 1; i >= 0; i--)
+    writeMods(ancestors[i]->modsrBegin(), ancestors[i]->modsrEnd());
 }
 
 void Serializer::writeBranch(BranchPtr branch)
@@ -88,10 +97,15 @@ NodePtr DeSerializer::readNode(ProblemPtr prob, NodePtr root)
   std::vector<ModificationPtr> rmods = readMods(prob);
 
 
-  for(auto i = 0; i < rmods.size(); i++)
+  for(size_t i = 0; i < rmods.size(); i++)
     node->addRMod(rmods[i]);
 
   return node;
+}
+
+NodePtr DeSerializer::readNode(ProblemPtr prob)
+{
+  readNode(prob, nullptr);
 }
 
 BranchPtr DeSerializer::readBranch(ProblemPtr prob)
@@ -99,7 +113,7 @@ BranchPtr DeSerializer::readBranch(ProblemPtr prob)
   BranchPtr br = new Branch();
 
   std::vector<ModificationPtr> rmods = readMods(prob);
-  for(auto i = 0; i < rmods.size(); i++)
+  for(size_t i = 0; i < rmods.size(); i++)
     br->addRMod(rmods[i]);
 
   br->setActivity(readArith<double>());
@@ -114,7 +128,7 @@ std::vector<ModificationPtr> DeSerializer::readMods(ProblemPtr prob)
 
   vec.resize(readArith<size_t>());
 
-  for(auto i = 0; i < vec.size(); i++)
+  for(size_t i = 0; i < vec.size(); i++)
   {
     VarBoundModPtr vbm = readVarBoundMod(prob);
     vec[i] = (ModificationPtr) vbm;

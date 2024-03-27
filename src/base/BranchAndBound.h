@@ -142,7 +142,7 @@ namespace Minotaur {
     void shouldCreateRoot(bool b);
 
     /// Start solving the Problem using branch-and-bound
-    void solve();
+    virtual void solve();
 
     /// Return total time taken
     double totalTime();
@@ -153,7 +153,7 @@ namespace Minotaur {
     /// Write statistics to the logger
     void writeStats();
 
-  private:
+  protected:
     /// Pointer to the enviroment.
     EnvPtr env_;
 

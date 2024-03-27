@@ -50,6 +50,7 @@ namespace Minotaur {
         T readArith();
 
       NodePtr readNode (ProblemPtr prob, NodePtr root);
+      NodePtr readNode (ProblemPtr prob);
       BranchPtr readBranch (ProblemPtr prob);
       std::vector<ModificationPtr> readMods (ProblemPtr prob);
       VarBoundModPtr readVarBoundMod (ProblemPtr prob);

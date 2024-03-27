@@ -150,6 +150,8 @@ namespace Minotaur {
      */
     double updateLb();
 
+    void insertRecvCandidate(NodePtr node);
+
   private:
     /// Set of nodes that are still active (those who need to be processed).
     ActiveNodeStorePtr activeNodes_; 

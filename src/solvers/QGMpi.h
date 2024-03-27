@@ -1,0 +1,16 @@
+#ifndef QGMPI_H
+#define QGMPI_H
+
+#include "QG.h"
+
+namespace Minotaur {
+
+  class QGMpi : public QG {
+    public:
+      using QG::QG;
+
+      virtual int solve(ProblemPtr p);
+  };
+}
+
+#endif

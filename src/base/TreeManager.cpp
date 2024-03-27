@@ -250,6 +250,14 @@ void TreeManager::insertCandidate_(NodePtr node, bool pop_now)
   }
 }
 
+void TreeManager::insertRecvCandidate(NodePtr node)
+{
+  node->setId(size_);
+
+  ++size_;
+
+  activeNodes_->push(node);
+}
 
 void TreeManager::insertRoot(NodePtr node)
 {
