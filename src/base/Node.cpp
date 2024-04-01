@@ -88,22 +88,27 @@ Node::~Node()
 bool Node::operator==(const Node &otherNode) const {
   bool res = true; 
 
-  res = res && (*branch_ == *otherNode.branch_);
+  /* res = res && (*branch_ == *otherNode.branch_); */
 
-  res = res && (id_ == otherNode.id_) && (lb_ && otherNode.lb_);
+  /* res = res && (id_ == otherNode.id_) && (lb_ && otherNode.lb_); */
 
-  res = res && (rMods_.size() == otherNode.rMods_.size());
+  /* res = res && (rMods_.size() == otherNode.rMods_.size()); */
   
 
-  if(!res)
-    return false;
+  /* if(!res) */
+  /*   return false; */
 
-  for(size_t i = 0; i < rMods_.size(); i++)
-  {
-    res = res && (*rMods_[i] == *otherNode.rMods_[i]);
-  }
+  /* for(size_t i = 0; i < rMods_.size(); i++) */
+  /* { */
+  /*   res = res && (*rMods_[i] == *otherNode.rMods_[i]); */
+  /* } */
 
   return res;
+}
+
+BranchPtr Node::getBranch()
+{
+  return branch_;
 }
 
 void Node::addChild(NodePtr childNode)

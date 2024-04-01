@@ -79,6 +79,10 @@ if (LINK_ASL)
 #    set (MINOTAUR_SOURCES  ${MINOTAUR_SOURCES} AMPLOsiUT.cpp)
 #  endif()
 endif()
+
+if (${MPI_FOUND})
+  include_directories(${MPI_INCLUDE_PATH})
+endif()
   
 add_executable(unittest EXCLUDE_FROM_ALL ${MINOTAUR_SOURCES})
 list(APPEND ALL_EXEC_LIBS minotaur cppunit)
@@ -104,6 +108,10 @@ if (LINK_OSI)
 endif()
 if (LINK_ASL)
   list(APPEND ALL_EXEC_LIBS ${ASL_LIB_DIR_F}/amplsolver.a)
+endif()
+
+if (${MPI_FOUND})
+  list(APPEND ALL_EXEC_LIBS ${MPI_CXX_LIBRARIES})
 endif()
 
 #add_custom_target(Name test unittest all)

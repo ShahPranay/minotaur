@@ -71,6 +71,8 @@ namespace Minotaur {
      */ 
     bool operator==(const Node &otherNode) const;
 
+    BranchPtr getBranch();
+
     /// Add a child node.
     void addChild(NodePtr childNode);
 

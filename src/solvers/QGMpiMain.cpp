@@ -12,7 +12,7 @@ using namespace Minotaur;
 
 int main(int argc, char** argv)
 {
-  MPI_Init(NULL, NULL);
+  MPI_Init(&argc, &argv);
 
   EnvPtr env = (EnvPtr) new Environment();
   int err = 0;

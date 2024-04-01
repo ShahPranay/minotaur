@@ -306,7 +306,8 @@ void TreeManager::removeNode_(NodePtr node)
   NodePtr  parent = node->getParent();;
   NodePtrIterator node_i;
 
-  if (node->getId()>0) {
+  // assume that even root can be removed
+  if (parent && node->getId()>0) {
     // Find the iterator corresponding to this node
     for (node_i = parent->childrenBegin(); node_i != parent->childrenEnd(); 
         ++node_i) {

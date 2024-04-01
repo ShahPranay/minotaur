@@ -108,6 +108,8 @@ void VarBoundMod::setOldVal(double oldval)
 
 void VarBoundMod::applyToProblem(ProblemPtr problem) 
 {
+  if (!problem)
+    std::cout << "prob issue\n";
   problem->changeBound(var_, lu_, newVal_);
 }
 

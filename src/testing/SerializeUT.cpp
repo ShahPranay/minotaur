@@ -56,7 +56,7 @@ void SerializeUT::test_serialize_reconstruct()
 
   DeSerializer des(cpy);
 
-  NodePtr newnode = des.readNode(instance_, par_);
+  NodePtr newnode = des.readNode(instance_);
 
   CPPUNIT_ASSERT((*newnode) == (*mynode_));
 

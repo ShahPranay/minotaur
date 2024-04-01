@@ -14,12 +14,12 @@ MpiBranchAndBound::MpiBranchAndBound(EnvPtr env, ProblemPtr p, int &cur_rank, in
 
 MpiBranchAndBound::~MpiBranchAndBound()
 {
-  
+
 }
 
 void MpiBranchAndBound::collectData_()
 {
-  
+
 }
 
 bool MpiBranchAndBound::shouldBalanceLoad_()
@@ -39,16 +39,16 @@ bool MpiBranchAndBound::shouldBalanceLoad_()
 // returns new current_node
 NodePtr MpiBranchAndBound::LoadBalance_()
 {
-  int busyCnt = 0, myContrib = (tm_->getActiveNodes() > 0) ? 1 : 0;
-  
-  MPI_Allreduce(&myContrib, &busyCnt, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-  
-  if(busyCnt == 0)
+  int nodesCnt = 0, myContrib = tm_->getActiveNodes();
+
+  MPI_Allreduce(&myContrib, &nodesCnt, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+  if(nodesCnt == 0)
   {
     all_finished_ = true;
     return nullptr;
   }
-  
+
   if(mpirank_ == 0)
   {
     NodePtr curnode = tm_->getCandidate();
@@ -57,6 +57,7 @@ NodePtr MpiBranchAndBound::LoadBalance_()
       Serializer nodesr;
       nodesr.writeNode(curnode);
       std::string msg = nodesr.get_string();
+      std::cout << "Message size = " << msg.size() << std::endl;
       // need to maintain buffers and requests for Isend.
       MPI_Send((void *) &(msg[0]), msg.size(), MPI_CHAR, 1, 0, MPI_COMM_WORLD);
 
@@ -68,11 +69,13 @@ NodePtr MpiBranchAndBound::LoadBalance_()
   }
   else
   {
-    for(int i = 0; i < busyCnt; i++)
+    std::cout << "Num Nodes Recv = " << nodesCnt << "\n";
+
+    for(int i = 0; i < nodesCnt; i++)
     {
-      std::string tmpbuf(100, '*');
+      std::string tmpbuf(200, '*');
       MPI_Status status;
-      MPI_Recv((void *) &(tmpbuf[0]), 100, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &status);
+      MPI_Recv((void *) &(tmpbuf[0]), 200, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &status);
 
       DeSerializer nodedes(tmpbuf);
       NodePtr newnode = nodedes.readNode(problem_);
@@ -148,6 +151,11 @@ void MpiBranchAndBound::solve()
 #endif
     }
   }
+  else{
+    if (options_->createRoot == true) {
+      nodeRlxr_->createRootRelaxation(current_node, should_prune)->setProblem(problem_);
+    }
+  }
 
   // solve root outside the loop. save the useful information.
   while(!all_finished_) {
@@ -155,6 +163,9 @@ void MpiBranchAndBound::solve()
 
     if (shouldBalanceLoad_())
       current_node = LoadBalance_();
+
+    if(!current_node)
+      continue;
 
 #if SPEW
     logger_->msgStream(LogDebug1) << me_ << "processing node "

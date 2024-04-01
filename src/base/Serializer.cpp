@@ -26,8 +26,6 @@ std::string Serializer::get_string()
 void Serializer::writeNode(NodePtr node)
 {
   // need to remove/ update this
-  writeBranch(node->getBranch());
-
   writeArith(node->getId());
   writeArith(node->getLb());
 
@@ -40,7 +38,13 @@ void Serializer::writeNode(NodePtr node)
   }
   
   for(int i = ancestors.size() - 1; i >= 0; i--)
+  {
+    BranchPtr curbranch = ancestors[i]->getBranch();
+    if(curbranch)
+      writeMods(curbranch->rModsBegin(), curbranch->rModsEnd());
+    
     writeMods(ancestors[i]->modsrBegin(), ancestors[i]->modsrEnd());
+  }
 }
 
 void Serializer::writeBranch(BranchPtr branch)
@@ -83,29 +87,21 @@ T DeSerializer::readArith()
   return var;
 }
 
-NodePtr DeSerializer::readNode(ProblemPtr prob, NodePtr root)
+NodePtr DeSerializer::readNode(ProblemPtr prob)
 {
-  BranchPtr cur_branch = readBranch(prob);
-
-  NodePtr node = new Node(root, cur_branch);
-
+  NodePtr node;
+  
+  node = new Node();
 
   node->setId(readArith<UInt>());
   node->setLb(readArith<double>());
 
-
   std::vector<ModificationPtr> rmods = readMods(prob);
-
 
   for(size_t i = 0; i < rmods.size(); i++)
     node->addRMod(rmods[i]);
 
   return node;
-}
-
-NodePtr DeSerializer::readNode(ProblemPtr prob)
-{
-  readNode(prob, nullptr);
 }
 
 BranchPtr DeSerializer::readBranch(ProblemPtr prob)
@@ -143,7 +139,7 @@ VarBoundModPtr DeSerializer::readVarBoundMod(ProblemPtr prob)
   UInt varid = readArith<UInt>();
   short bndtype = readArith<short>();
 
-  VariablePtr var = prob->getVariable(varid);
+  VariablePtr var = prob->getVariable(varid - 1);
   BoundType bt = static_cast<BoundType>(bndtype);
 
   VarBoundModPtr vbm = new VarBoundMod(var, bt, readArith<double>());
