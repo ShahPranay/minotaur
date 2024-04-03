@@ -78,7 +78,7 @@ NodePtr MpiBranchAndBound::LoadBalance_()
       MPI_Recv((void *) &(tmpbuf[0]), 200, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &status);
 
       DeSerializer nodedes(tmpbuf);
-      NodePtr newnode = nodedes.readNode(problem_);
+      NodePtr newnode = nodedes.readNode(nodeRlxr_->getRelaxation());
       tm_->insertRecvCandidate(newnode);
     }
     return tm_->getCandidate();

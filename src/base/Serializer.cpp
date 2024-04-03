@@ -36,15 +36,23 @@ void Serializer::writeNode(NodePtr node)
     ancestors.push_back(curNode);
     curNode = curNode->getParent();
   }
+
+  std::vector<ModificationPtr> allmods;
   
   for(int i = ancestors.size() - 1; i >= 0; i--)
   {
     BranchPtr curbranch = ancestors[i]->getBranch();
     if(curbranch)
-      writeMods(curbranch->rModsBegin(), curbranch->rModsEnd());
-    
-    writeMods(ancestors[i]->modsrBegin(), ancestors[i]->modsrEnd());
+    {
+      for(auto itr = curbranch->rModsBegin(); itr != curbranch->rModsEnd(); itr++)
+        allmods.push_back(*itr);
+    }
+     
+    for(auto itr = ancestors[i]->modsrBegin(); itr != ancestors[i]->modsrEnd(); itr++)
+      allmods.push_back(*itr);
   }
+
+  writeMods(allmods.begin(), allmods.end());
 }
 
 void Serializer::writeBranch(BranchPtr branch)
@@ -55,10 +63,11 @@ void Serializer::writeBranch(BranchPtr branch)
 
 void Serializer::writeVbm(VarBoundModPtr vbm)
 {
-  writeArith((vbm->getVar())->getId());
+  writeArith((vbm->getVar())->getIndex());
   writeArith((short) vbm->getLU());
   writeArith(vbm->getNewVal());
   writeArith(vbm->getOldVal());
+
 }
 
 // assumes all the modifications are VarBoundMod. Modify to incorporate other modifications too.
@@ -139,7 +148,7 @@ VarBoundModPtr DeSerializer::readVarBoundMod(ProblemPtr prob)
   UInt varid = readArith<UInt>();
   short bndtype = readArith<short>();
 
-  VariablePtr var = prob->getVariable(varid - 1);
+  VariablePtr var = prob->getVariable(varid);
   BoundType bt = static_cast<BoundType>(bndtype);
 
   VarBoundModPtr vbm = new VarBoundMod(var, bt, readArith<double>());
