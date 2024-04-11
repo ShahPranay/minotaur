@@ -127,7 +127,6 @@ int QGMpi::solve(ProblemPtr p)
     writeSol_(env_, orig_v, pres, SolutionPtr(), status_, iface_);
     goto CLEANUP;
   }
-  std::cout << "After Presolvin\n";
 
   // transform to exploit separability
   sepDetection();

@@ -1,10 +1,14 @@
 #include <cmath>
+#include <algorithm>
+#include <vector>
+#include <iostream>
 
 #include "mpi.h"
 #include "MpiBranchAndBound.h"
 #include "Serializer.h"
 
 using namespace Minotaur;
+using std::cout, std::endl;
 
 MpiBranchAndBound::MpiBranchAndBound(EnvPtr env, ProblemPtr p, int &cur_rank, int &comm_world_size) :
   BranchAndBound(env, p), mpirank_(cur_rank), comm_world_size_(comm_world_size), all_finished_(false)
@@ -29,7 +33,7 @@ bool MpiBranchAndBound::shouldBalanceLoad_()
 
   if(mpirank_ == 0)
   {
-    if(tm_->getActiveNodes() >= 2)
+    if(tm_->getActiveNodes() >= comm_world_size_)
       return true;
     else return false;
   }
@@ -39,50 +43,123 @@ bool MpiBranchAndBound::shouldBalanceLoad_()
 // returns new current_node
 NodePtr MpiBranchAndBound::LoadBalance_()
 {
-  int nodesCnt = 0, myContrib = tm_->getActiveNodes();
+  constexpr unsigned MIN_NODES_PER_RANK = 1;
+  constexpr double MAX_LB = 1e18;
+  unsigned num_send_nodes = MIN_NODES_PER_RANK * comm_world_size_, num_tot_nodes = num_send_nodes * comm_world_size_;
 
-  MPI_Allreduce(&myContrib, &nodesCnt, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  std::vector<double> myLbs, worldLbs(num_tot_nodes, 9);
+  std::vector<NodePtr> poppedNodes;
 
-  if(nodesCnt == 0)
+  NodePtr curnode = tm_->getCandidate();
+  for(unsigned i = 0; curnode && i < num_send_nodes; i++)
   {
+    myLbs.push_back(curnode->getLb());
+
+    poppedNodes.push_back(curnode);
+    tm_->removeActiveNode(curnode);
+    curnode = tm_->getCandidate();
+  }
+
+  // change default value
+  myLbs.resize(num_send_nodes, MAX_LB);
+  /* if (mpirank_ <= 1) */
+  /* { */
+  /*   for ( double tmp : myLbs ) */
+  /*   { */
+  /*     cout << tmp << " "; */
+  /*   } */
+  /*   cout << endl; */
+  /* } */
+
+  MPI_Allgather(&myLbs[0], num_send_nodes, MPI_DOUBLE, &worldLbs[0], num_send_nodes, MPI_DOUBLE, MPI_COMM_WORLD);
+
+  /* if (mpirank_ == 0) */
+  /* { */
+  /*   for ( double tmp : worldLbs ) */
+  /*   { */
+  /*     cout << tmp << " "; */
+  /*   } */
+  /*   cout << endl; */
+  /* } */
+
+  struct NodeInfo
+  {
+    unsigned owner_rank, local_index;
+    double Lb;
+
+    public:
+    NodeInfo(unsigned owr, unsigned li, double lb) : owner_rank(owr), local_index(li), Lb(lb) {  }
+  };
+
+  auto cmpNodeInfo = [](const NodeInfo &a, const NodeInfo &b) -> bool 
+  {
+    return a.Lb < b.Lb;
+  };
+
+  std::vector<NodeInfo> worldNodeInfos;
+
+  for (unsigned blockrank = 0; blockrank < comm_world_size_; blockrank++)
+  {
+    for (unsigned local_index = 0; local_index < num_send_nodes; local_index++)
+    {
+      worldNodeInfos.push_back(NodeInfo(blockrank, local_index, worldLbs[blockrank * num_send_nodes + local_index]));
+    }
+  }
+
+  std::sort(worldNodeInfos.begin(), worldNodeInfos.end(), cmpNodeInfo);
+
+  if (mpirank_ == 1)
+  {
+    for (auto curinfo : worldNodeInfos)
+    {
+      cout << curinfo.owner_rank << ", " << curinfo.Lb << endl;
+    }
+  }
+
+  if ( worldNodeInfos[0].Lb == MAX_LB ){
     all_finished_ = true;
     return nullptr;
   }
 
-  if(mpirank_ == 0)
+  for (unsigned i = 0; i < num_tot_nodes; i++)
   {
-    NodePtr curnode = tm_->getCandidate();
-    while(curnode)
+    unsigned receiver_rank = i % comm_world_size_;
+    NodeInfo &curinfo = worldNodeInfos[i];
+
+    if ( curinfo.Lb == MAX_LB )
+      break;
+
+    if ( mpirank_ == receiver_rank )
+    {
+      if ( curinfo.owner_rank == mpirank_ )
+      {
+        tm_->insertRecvCandidate(poppedNodes[curinfo.local_index]);
+      }
+      else 
+      {
+        std::string tmpbuf(200, '*');
+        MPI_Status status;
+        MPI_Recv((void *) &(tmpbuf[0]), 200, MPI_CHAR, curinfo.owner_rank, 0, MPI_COMM_WORLD, &status);
+
+        DeSerializer nodedes(tmpbuf);
+        NodePtr newnode = nodedes.readNode(nodeRlxr_->getRelaxation());
+
+        cout << mpirank_ << ": Recv node ID: " << newnode->getId() << " with Lb: " << newnode->getLb() << endl;
+        tm_->insertRecvCandidate(newnode);
+      }
+    }
+    else if ( worldNodeInfos[i].owner_rank == mpirank_ )
     {
       Serializer nodesr;
-      nodesr.writeNode(curnode);
+      nodesr.writeNode(poppedNodes[curinfo.local_index]);
       std::string msg = nodesr.get_string();
-      std::cout << "Message size = " << msg.size() << std::endl;
+      /* std::cout << "Message size = " << msg.size() << std::endl; */
       // need to maintain buffers and requests for Isend.
-      MPI_Send((void *) &(msg[0]), msg.size(), MPI_CHAR, 1, 0, MPI_COMM_WORLD);
-
-      tm_->removeActiveNode(curnode);
-      curnode = tm_->getCandidate();
+      MPI_Send((void *) &(msg[0]), msg.size(), MPI_CHAR, receiver_rank, 0, MPI_COMM_WORLD);
     }
-
-    return nullptr;
   }
-  else
-  {
-    std::cout << "Num Nodes Recv = " << nodesCnt << "\n";
 
-    for(int i = 0; i < nodesCnt; i++)
-    {
-      std::string tmpbuf(200, '*');
-      MPI_Status status;
-      MPI_Recv((void *) &(tmpbuf[0]), 200, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &status);
-
-      DeSerializer nodedes(tmpbuf);
-      NodePtr newnode = nodedes.readNode(nodeRlxr_->getRelaxation());
-      tm_->insertRecvCandidate(newnode);
-    }
-    return tm_->getCandidate();
-  }
+  return tm_->getCandidate();
 }
 
 void MpiBranchAndBound::solve()
@@ -157,12 +234,14 @@ void MpiBranchAndBound::solve()
     }
   }
 
+  unsigned itr_cnt = 0;
+
   // solve root outside the loop. save the useful information.
-  while(!all_finished_) {
+  while(!all_finished_ && itr_cnt++ < 5) {
     collectData_();
 
-    if (shouldBalanceLoad_())
-      current_node = LoadBalance_();
+    /* if (shouldBalanceLoad_()) */
+    current_node = LoadBalance_();
 
     if(!current_node)
       continue;

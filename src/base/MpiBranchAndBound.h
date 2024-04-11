@@ -19,7 +19,7 @@ namespace Minotaur {
       bool shouldBalanceLoad_();
       NodePtr LoadBalance_();
 
-      int mpirank_, comm_world_size_;
+      unsigned mpirank_, comm_world_size_;
       bool all_finished_;
   };
 }
