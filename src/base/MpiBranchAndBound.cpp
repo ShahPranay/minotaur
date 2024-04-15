@@ -41,16 +41,15 @@ bool MpiBranchAndBound::shouldBalanceLoad_()
 }
 
 // returns new current_node
-NodePtr MpiBranchAndBound::LoadBalance_()
+NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
 {
   constexpr unsigned MIN_NODES_PER_RANK = 1;
-  constexpr double MAX_LB = 1e18;
+  constexpr double MAX_LB = INFINITY;
   unsigned num_send_nodes = MIN_NODES_PER_RANK * comm_world_size_, num_tot_nodes = num_send_nodes * comm_world_size_;
 
   std::vector<double> myLbs, worldLbs(num_tot_nodes, 9);
   std::vector<NodePtr> poppedNodes;
-
-  NodePtr curnode = tm_->getCandidate();
+  NodePtr curnode = current_node;
   for(unsigned i = 0; curnode && i < num_send_nodes; i++)
   {
     myLbs.push_back(curnode->getLb());
@@ -60,27 +59,9 @@ NodePtr MpiBranchAndBound::LoadBalance_()
     curnode = tm_->getCandidate();
   }
 
-  // change default value
   myLbs.resize(num_send_nodes, MAX_LB);
-  /* if (mpirank_ <= 1) */
-  /* { */
-  /*   for ( double tmp : myLbs ) */
-  /*   { */
-  /*     cout << tmp << " "; */
-  /*   } */
-  /*   cout << endl; */
-  /* } */
 
   MPI_Allgather(&myLbs[0], num_send_nodes, MPI_DOUBLE, &worldLbs[0], num_send_nodes, MPI_DOUBLE, MPI_COMM_WORLD);
-
-  /* if (mpirank_ == 0) */
-  /* { */
-  /*   for ( double tmp : worldLbs ) */
-  /*   { */
-  /*     cout << tmp << " "; */
-  /*   } */
-  /*   cout << endl; */
-  /* } */
 
   struct NodeInfo
   {
@@ -108,11 +89,12 @@ NodePtr MpiBranchAndBound::LoadBalance_()
 
   std::sort(worldNodeInfos.begin(), worldNodeInfos.end(), cmpNodeInfo);
 
-  if (mpirank_ == 1)
+  if (mpirank_ == 0)
   {
+    cout << "worldNodeInfos::" << endl;
     for (auto curinfo : worldNodeInfos)
     {
-      cout << curinfo.owner_rank << ", " << curinfo.Lb << endl;
+      cout << "Node Owner: "<< curinfo.owner_rank << ", Node Lb: " << curinfo.Lb << endl;
     }
   }
 
@@ -133,7 +115,8 @@ NodePtr MpiBranchAndBound::LoadBalance_()
     {
       if ( curinfo.owner_rank == mpirank_ )
       {
-        tm_->insertRecvCandidate(poppedNodes[curinfo.local_index]);
+        cout << "Rank " << mpirank_ << "; ReInserting NodeID: " << poppedNodes[curinfo.local_index]->getId() << endl;
+        tm_->insertPoppedCandidate(poppedNodes[curinfo.local_index]);
       }
       else 
       {
@@ -144,7 +127,7 @@ NodePtr MpiBranchAndBound::LoadBalance_()
         DeSerializer nodedes(tmpbuf);
         NodePtr newnode = nodedes.readNode(nodeRlxr_->getRelaxation());
 
-        cout << mpirank_ << ": Recv node ID: " << newnode->getId() << " with Lb: " << newnode->getLb() << endl;
+        cout << "Rank " << mpirank_ << "; Recv node ID: " << newnode->getId() << " with Lb: " << newnode->getLb() << endl;
         tm_->insertRecvCandidate(newnode);
       }
     }
@@ -152,12 +135,15 @@ NodePtr MpiBranchAndBound::LoadBalance_()
     {
       Serializer nodesr;
       nodesr.writeNode(poppedNodes[curinfo.local_index]);
+      tm_->pruneNode(poppedNodes[curinfo.local_index]); // remove from current tree
       std::string msg = nodesr.get_string();
       /* std::cout << "Message size = " << msg.size() << std::endl; */
       // need to maintain buffers and requests for Isend.
       MPI_Send((void *) &(msg[0]), msg.size(), MPI_CHAR, receiver_rank, 0, MPI_COMM_WORLD);
     }
   }
+
+  cout << endl;
 
   return tm_->getCandidate();
 }
@@ -237,14 +223,18 @@ void MpiBranchAndBound::solve()
   unsigned itr_cnt = 0;
 
   // solve root outside the loop. save the useful information.
-  while(!all_finished_ && itr_cnt++ < 5) {
+  while(!all_finished_) {
+    itr_cnt++;
+
     collectData_();
 
-    /* if (shouldBalanceLoad_()) */
-    current_node = LoadBalance_();
+    /* if (itr_cnt % 2 == 1) */
+    current_node = LoadBalance_(current_node);
 
     if(!current_node)
       continue;
+
+    cout << "Rank " << mpirank_ << "; Processing; No. ActiveNodes = " << tm_->getActiveNodes() << "; Current NodeID = " << current_node->getId() << "; Lb = " << current_node->getLb() << endl;
 
 #if SPEW
     logger_->msgStream(LogDebug1) << me_ << "processing node "
@@ -266,6 +256,7 @@ void MpiBranchAndBound::solve()
 
     if (nodePrcssr_->foundNewSolution()) {
       tm_->setUb(solPool_->getBestSolutionValue());
+      // send to all mpiranks
     }
 
     should_prune = shouldPrune_(current_node);
@@ -307,6 +298,9 @@ void MpiBranchAndBound::solve()
       }
     }
     current_node = new_node;
+
+    if(!current_node)
+      cout << "Rank " << mpirank_ << ": Afterprocessing; ActiveNodes = " << tm_->getActiveNodes() << "Node pruned!" << endl;
 
     showStatus_(should_dive, false);
 

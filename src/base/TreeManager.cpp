@@ -11,6 +11,7 @@
  */
 
 #include <cmath>
+#include <iostream>
 
 #include "MinotaurConfig.h"
 #include "Branch.h"
@@ -250,6 +251,7 @@ void TreeManager::insertCandidate_(NodePtr node, bool pop_now)
   }
 }
 
+
 void TreeManager::insertRecvCandidate(NodePtr node)
 {
   node->setId(size_);
@@ -258,6 +260,13 @@ void TreeManager::insertRecvCandidate(NodePtr node)
 
   activeNodes_->push(node);
 }
+
+
+void TreeManager::insertPoppedCandidate(NodePtr node)
+{
+  activeNodes_->push(node);
+}
+
 
 void TreeManager::insertRoot(NodePtr node)
 {
@@ -305,6 +314,7 @@ void TreeManager::removeNode_(NodePtr node)
   NodePtr cNode = 0;
   NodePtr  parent = node->getParent();;
   NodePtrIterator node_i;
+
 
   // assume that even root can be removed
   if (parent && node->getId()>0) {
