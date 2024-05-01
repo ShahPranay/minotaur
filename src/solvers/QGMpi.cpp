@@ -229,21 +229,24 @@ int QGMpi::solve(ProblemPtr p)
   ub_ = bab->getUb();
   sol_ = bab->getSolution();
 
-  bab->writeStats(env_->getLogger()->msgStream(LogExtraInfo));
-  nlp_e->writeStats(env_->getLogger()->msgStream(LogExtraInfo));
-  lp_e->writeStats(env_->getLogger()->msgStream(LogExtraInfo));
+  if (mpirank == 0)
+  {
+    bab->writeStats(env_->getLogger()->msgStream(LogExtraInfo));
+    nlp_e->writeStats(env_->getLogger()->msgStream(LogExtraInfo));
+    lp_e->writeStats(env_->getLogger()->msgStream(LogExtraInfo));
 
-  for(HandlerVector::iterator it = handlers.begin(); it != handlers.end();
-      ++it) {
-    (*it)->writeStats(env_->getLogger()->msgStream(LogExtraInfo));
+    for(HandlerVector::iterator it = handlers.begin(); it != handlers.end();
+        ++it) {
+      (*it)->writeStats(env_->getLogger()->msgStream(LogExtraInfo));
+    }
+
+
+    err = writeSol_(env_, orig_v, pres, sol_, status_, iface_);
+    if(err) {
+      goto CLEANUP;
+    }
+    err = writeBnbStatus_(bab);
   }
-
-
-  err = writeSol_(env_, orig_v, pres, sol_, status_, iface_);
-  if(err) {
-    goto CLEANUP;
-  }
-  err = writeBnbStatus_(bab);
 
 CLEANUP:
   for(HandlerVector::iterator it = handlers.begin(); it != handlers.end();

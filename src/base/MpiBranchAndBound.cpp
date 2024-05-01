@@ -13,7 +13,7 @@ using std::cout, std::endl;
 MpiBranchAndBound::MpiBranchAndBound(EnvPtr env, ProblemPtr p, int &cur_rank, int &comm_world_size) :
   BranchAndBound(env, p), mpirank_(cur_rank), comm_world_size_(comm_world_size), all_finished_(false)
 {
-
+  lb_timer_ = env->getNewTimer();
 }
 
 MpiBranchAndBound::~MpiBranchAndBound()
@@ -24,34 +24,33 @@ MpiBranchAndBound::~MpiBranchAndBound()
 void MpiBranchAndBound::collectData_()
 {
   int ismsg = 0;
-  MPI_Status status;
-  MPI_Iprobe(MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &ismsg, &status);
-  if (!ismsg)
-    return;
   double value;
-  MPI_Recv(&value, 1, MPI_DOUBLE, status.MPI_SOURCE, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-  cout << "Recieved sol value = " << value << endl;
-  if (value < tm_->getUb())
-    tm_->setUb(value);
+  while(true)
+  {
+    MPI_Status status;
+    MPI_Iprobe(MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &ismsg, &status);
+    if (!ismsg)
+      return;
+    MPI_Recv(&value, 1, MPI_DOUBLE, status.MPI_SOURCE, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    /* cout << "Recieved sol value = " << value << endl; */
+    if (value < tm_->getUb())
+      tm_->setUb(value);
+  }
 }
 
 bool MpiBranchAndBound::shouldBalanceLoad_()
 {
-  if(tm_->getActiveNodes() == 0)
-    return true;
-
-  if(mpirank_ == 0)
-  {
-    if(tm_->getActiveNodes() >= comm_world_size_)
-      return true;
-    else return false;
-  }
-  else return false;
+  static double lb_frequency = 5;
+  if (lb_timer_->query() < lb_frequency)
+    return false;
+  lb_frequency += 1;
+  return true;
 }
 
 // returns new current_node
 NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
 {
+  cout << "Insider load balance" << endl;
   constexpr unsigned MIN_NODES_PER_RANK = 1;
   constexpr double MAX_LB = INFINITY;
   unsigned num_send_nodes = MIN_NODES_PER_RANK * comm_world_size_, num_tot_nodes = num_send_nodes * comm_world_size_;
@@ -98,14 +97,14 @@ NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
 
   std::sort(worldNodeInfos.begin(), worldNodeInfos.end(), cmpNodeInfo);
 
-  if (mpirank_ == 0)
-  {
-    cout << "worldNodeInfos::" << endl;
-    for (auto curinfo : worldNodeInfos)
-    {
-      cout << "Node Owner: "<< curinfo.owner_rank << ", Node Lb: " << curinfo.Lb << endl;
-    }
-  }
+  /* if (mpirank_ == 0) */
+  /* { */
+    /* cout << "worldNodeInfos::" << endl; */
+    /* for (auto curinfo : worldNodeInfos) */
+    /* { */
+      /* cout << "Node Owner: "<< curinfo.owner_rank << ", Node Lb: " << curinfo.Lb << endl; */
+    /* } */
+  /* } */
 
   if ( worldNodeInfos[0].Lb == MAX_LB ){
     all_finished_ = true;
@@ -124,19 +123,19 @@ NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
     {
       if ( curinfo.owner_rank == mpirank_ )
       {
-        cout << "Rank " << mpirank_ << "; ReInserting NodeID: " << poppedNodes[curinfo.local_index]->getId() << endl;
+        /* cout << "Rank " << mpirank_ << "; ReInserting NodeID: " << poppedNodes[curinfo.local_index]->getId() << endl; */
         tm_->insertPoppedCandidate(poppedNodes[curinfo.local_index]);
       }
       else 
       {
-        std::string tmpbuf(200, '*');
+        std::string tmpbuf(1000, '*');
         MPI_Status status;
-        MPI_Recv((void *) &(tmpbuf[0]), 200, MPI_CHAR, curinfo.owner_rank, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv((void *) &(tmpbuf[0]), 1000, MPI_CHAR, curinfo.owner_rank, 0, MPI_COMM_WORLD, &status);
 
         DeSerializer nodedes(tmpbuf);
         NodePtr newnode = nodedes.readNode(nodeRlxr_->getRelaxation());
 
-        cout << "Rank " << mpirank_ << "; Recv node ID: " << newnode->getId() << " with Lb: " << newnode->getLb() << endl;
+        /* cout << "Rank " << mpirank_ << "; Recv node ID: " << newnode->getId() << " with Lb: " << newnode->getLb() << endl; */
         tm_->insertRecvCandidate(newnode);
       }
     }
@@ -152,14 +151,16 @@ NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
     }
   }
 
-  cout << endl;
+  lb_timer_->stop();
+  lb_timer_->start();
+  /* cout << endl; */
 
   return tm_->getCandidate();
 }
 
 void MpiBranchAndBound::sendToAll_(double value)
 {
-  cout << "Sendin sol value = " << value << endl;
+  /* cout << "Sendin sol value = " << value << endl; */
   for (unsigned r = 0; r < comm_world_size_; r++)
   {
     if (r == mpirank_)
@@ -242,21 +243,19 @@ void MpiBranchAndBound::solve()
     }
   }
 
-  unsigned itr_cnt = 0;
+  lb_timer_->start();
 
   // solve root outside the loop. save the useful information.
   while(!all_finished_) {
-    itr_cnt++;
-
     collectData_();
 
-    /* if (itr_cnt % 2 == 1) */
-    current_node = LoadBalance_(current_node);
+    if (shouldBalanceLoad_())
+      current_node = LoadBalance_(current_node);
 
     if(!current_node)
       continue;
 
-    cout << "Rank " << mpirank_ << "; Processing; No. ActiveNodes = " << tm_->getActiveNodes() << "; Current NodeID = " << current_node->getId() << "; Lb = " << current_node->getLb() << endl;
+    /* cout << "Rank " << mpirank_ << "; Processing; No. ActiveNodes = " << tm_->getActiveNodes() << "; Current NodeID = " << current_node->getId() << "; Lb = " << current_node->getLb() << endl; */
 
 #if SPEW
     logger_->msgStream(LogDebug1) << me_ << "processing node "
@@ -321,10 +320,11 @@ void MpiBranchAndBound::solve()
     }
     current_node = new_node;
 
-    if(!current_node)
-      cout << "Rank " << mpirank_ << ": Afterprocessing; ActiveNodes = " << tm_->getActiveNodes() << "Node pruned!" << endl;
+    /* if(!current_node) */
+      /* cout << "Rank " << mpirank_ << ": Afterprocessing; ActiveNodes = " << tm_->getActiveNodes() << "Node pruned!" << endl; */
 
-    showStatus_(should_dive, false);
+    if (mpirank_ == 0)
+      showStatus_(should_dive, false);
 
     // TODO:stop if done
     /* if (shouldStop_()) { */
@@ -356,15 +356,20 @@ void MpiBranchAndBound::solve()
 #endif
   }
 
-  showStatus_(false, true);
-  //logger_->msgStream(LogError) << " " << std::endl;
-  logger_->msgStream(LogError) << "----------------------------------------------------------------------------------------------" << std::endl;
-  logger_->msgStream(LogError) << " " << std::endl;
+  if (mpirank_ == 0)
+  {
+    showStatus_(false, true);
+    //logger_->msgStream(LogError) << " " << std::endl;
 
-  logger_->msgStream(LogInfo) << me_ << "stopping branch-and-bound"
-    << std::endl
-    << me_ << "nodes processed = " << stats_->nodesProc << std::endl
-    << me_ << "nodes created   = " << tm_->getSize() << std::endl;
+    logger_->msgStream(LogError) << "----------------------------------------------------------------------------------------------" << std::endl;
+    logger_->msgStream(LogError) << " " << std::endl;
+
+    logger_->msgStream(LogInfo) << me_ << "stopping branch-and-bound"
+      << std::endl
+      << me_ << "nodes processed = " << stats_->nodesProc << std::endl
+      << me_ << "nodes created   = " << tm_->getSize() << std::endl;
+  } 
   stats_->timeUsed = timer_->query();
   timer_->stop();
+  lb_timer_->stop();
 }

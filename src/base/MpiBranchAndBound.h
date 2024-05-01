@@ -22,6 +22,8 @@ namespace Minotaur {
 
       unsigned mpirank_, comm_world_size_;
       bool all_finished_;
+
+      Timer *lb_timer_;
   };
 }
 #endif
