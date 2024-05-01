@@ -128,9 +128,9 @@ NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
       }
       else 
       {
-        std::string tmpbuf(1000, '*');
+        std::string tmpbuf(5000, '*');
         MPI_Status status;
-        MPI_Recv((void *) &(tmpbuf[0]), 1000, MPI_CHAR, curinfo.owner_rank, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv((void *) &(tmpbuf[0]), 5000, MPI_CHAR, curinfo.owner_rank, 0, MPI_COMM_WORLD, &status);
 
         DeSerializer nodedes(tmpbuf);
         NodePtr newnode = nodedes.readNode(nodeRlxr_->getRelaxation());

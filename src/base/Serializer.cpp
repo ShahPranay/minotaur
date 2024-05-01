@@ -61,22 +61,53 @@ void Serializer::writeBranch(BranchPtr branch)
   writeArith(branch->getActivity());
 }
 
+static std::pair<int, short> getKey(VarBoundModPtr vbm)
+{
+  return { 
+    (vbm->getVar())->getIndex(),
+      (short) vbm->getLU()
+  };
+}
+
+static std::pair<double, double> getVals(VarBoundModPtr vbm)
+{
+  return {
+    vbm->getOldVal(),
+      vbm->getNewVal()
+  };
+}
+
 void Serializer::writeVbm(VarBoundModPtr vbm)
 {
   writeArith((vbm->getVar())->getIndex());
   writeArith((short) vbm->getLU());
   writeArith(vbm->getNewVal());
   writeArith(vbm->getOldVal());
-
 }
 
 // assumes all the modifications are VarBoundMod. Modify to incorporate other modifications too.
 void Serializer::writeMods(ModificationConstIterator begin, ModificationConstIterator end)
 {
-  writeArith((size_t) (end - begin));
+  std::map<std::pair<int, short>, std::pair<double, double>> vbm_map; 
   for(auto ptr = begin; ptr != end; ptr++)
   {
-    writeVbm((VarBoundModPtr) *ptr);
+    auto key = getKey((VarBoundModPtr) *ptr);
+    auto vals = getVals((VarBoundModPtr) *ptr);
+    if (vbm_map.find(key) == vbm_map.end())
+      vbm_map[key] = vals;
+    else
+    {
+      vals.first = vbm_map[key].first;
+      vbm_map[key] = vals;
+    }
+  }
+  writeArith(vbm_map.size());
+  for (auto &p: vbm_map)
+  {
+    writeArith(p.first.first);
+    writeArith(p.first.second);
+    writeArith(p.second.first);
+    writeArith(p.second.second);
   }
 }
 
@@ -151,9 +182,10 @@ VarBoundModPtr DeSerializer::readVarBoundMod(ProblemPtr prob)
   VariablePtr var = prob->getVariable(varid);
   BoundType bt = static_cast<BoundType>(bndtype);
 
-  VarBoundModPtr vbm = new VarBoundMod(var, bt, readArith<double>());
+  double oldval = readArith<double>(), newval = readArith<double>();
 
-  vbm->setOldVal(readArith<double>());
+  VarBoundModPtr vbm = new VarBoundMod(var, bt, newval);
+  vbm->setOldVal(oldval);
 
   return vbm;
 }
