@@ -23,7 +23,16 @@ MpiBranchAndBound::~MpiBranchAndBound()
 
 void MpiBranchAndBound::collectData_()
 {
-
+  int ismsg = 0;
+  MPI_Status status;
+  MPI_Iprobe(MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &ismsg, &status);
+  if (!ismsg)
+    return;
+  double value;
+  MPI_Recv(&value, 1, MPI_DOUBLE, status.MPI_SOURCE, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  cout << "Recieved sol value = " << value << endl;
+  if (value < tm_->getUb())
+    tm_->setUb(value);
 }
 
 bool MpiBranchAndBound::shouldBalanceLoad_()
@@ -148,6 +157,19 @@ NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
   return tm_->getCandidate();
 }
 
+void MpiBranchAndBound::sendToAll_(double value)
+{
+  cout << "Sendin sol value = " << value << endl;
+  for (unsigned r = 0; r < comm_world_size_; r++)
+  {
+    if (r == mpirank_)
+      continue;
+    MPI_Request req;
+    MPI_Isend(&value, 1, MPI_DOUBLE, r, 1, MPI_COMM_WORLD, &req);
+    MPI_Wait(&req, MPI_STATUS_IGNORE);
+  }
+}
+
 void MpiBranchAndBound::solve()
 {
   bool should_dive = false, dived_prev = false;
@@ -256,7 +278,7 @@ void MpiBranchAndBound::solve()
 
     if (nodePrcssr_->foundNewSolution()) {
       tm_->setUb(solPool_->getBestSolutionValue());
-      // send to all mpiranks
+      sendToAll_(solPool_->getBestSolutionValue());
     }
 
     should_prune = shouldPrune_(current_node);

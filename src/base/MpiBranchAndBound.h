@@ -17,6 +17,7 @@ namespace Minotaur {
     private:
       void collectData_();
       bool shouldBalanceLoad_();
+      void sendToAll_(double value);
       NodePtr LoadBalance_(NodePtr current_node);
 
       unsigned mpirank_, comm_world_size_;
