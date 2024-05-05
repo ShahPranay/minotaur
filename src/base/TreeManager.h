@@ -151,8 +151,8 @@ namespace Minotaur {
     double updateLb();
 
     void insertRecvCandidate(NodePtr node);
-
     void insertPoppedCandidate(NodePtr node);
+    void sentNode();
 
   private:
     /// Set of nodes that are still active (those who need to be processed).
@@ -188,6 +188,8 @@ namespace Minotaur {
      * ones that were deleted.
      */
     UInt size_;
+
+    UInt nextID_;
     
     /// Timer is used only for vbc tree emulation.
     Timer *timer_;

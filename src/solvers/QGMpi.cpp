@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <ostream>
 #include <iostream>
+#include <sstream>
 
 #include "AMPLHessian.h"
 #include "AMPLInterface.h"
@@ -70,6 +71,7 @@ int QGMpi::solve(ProblemPtr p)
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
   MPI_Comm_size(MPI_COMM_WORLD, &comm_world_size);
 
+  std::ostringstream out;
 
   timer->start();
   if(options->findBool("display_problem")->getValue() == true) {
@@ -229,24 +231,27 @@ int QGMpi::solve(ProblemPtr p)
   ub_ = bab->getUb();
   sol_ = bab->getSolution();
 
-  if (mpirank == 0)
-  {
-    bab->writeStats(env_->getLogger()->msgStream(LogExtraInfo));
-    nlp_e->writeStats(env_->getLogger()->msgStream(LogExtraInfo));
-    lp_e->writeStats(env_->getLogger()->msgStream(LogExtraInfo));
+  out << "----------------------------------------------------------------------------------------------\n";
+  out << "Rank " << mpirank << ":\n\n";
 
-    for(HandlerVector::iterator it = handlers.begin(); it != handlers.end();
-        ++it) {
-      (*it)->writeStats(env_->getLogger()->msgStream(LogExtraInfo));
-    }
+  bab->writeStats(out);
+  nlp_e->writeStats(out);
+  lp_e->writeStats(out);
 
-
-    err = writeSol_(env_, orig_v, pres, sol_, status_, iface_);
-    if(err) {
-      goto CLEANUP;
-    }
-    err = writeBnbStatus_(bab);
+  for(HandlerVector::iterator it = handlers.begin(); it != handlers.end();
+      ++it) {
+    (*it)->writeStats(out);
   }
+
+  /* out << "----------------------------------------------------------------------------------------------\n"; */
+
+  env_->getLogger()->msgStream(LogExtraInfo) << out.str();
+
+  err = writeSol_(env_, orig_v, pres, sol_, status_, iface_);
+  if(err) {
+    goto CLEANUP;
+  }
+  err = writeBnbStatus_(bab);
 
 CLEANUP:
   for(HandlerVector::iterator it = handlers.begin(); it != handlers.end();
@@ -282,5 +287,53 @@ CLEANUP:
     delete timer;
   }
   oinst_ = 0;
+  return err;
+}
+
+int QGMpi::writeBnbStatus_(BranchAndBound* bab)
+{
+  int err = 0;
+  std::ostringstream out;
+
+  int mpirank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
+
+  out << "----------------------------------------------------------------------------------------------\n";
+  out << "Bnb End Stats for Rank " << mpirank << ":\n\n";
+
+  if(bab) {
+    out
+      << me_ << std::fixed << std::setprecision(4)
+      << "best solution value = " << objSense_ * ub_ << std::endl
+      << me_ << std::fixed << std::setprecision(4)
+      << "best bound estimate from remaining nodes = " << objSense_ * lb_
+      << std::endl
+      << me_ << "gap = " << std::max(0.0, ub_ - lb_) << std::endl
+      << me_ << "gap percentage = " << bab->getPerGap() << std::endl
+      << me_ << "time used (s) = " << std::fixed << std::setprecision(2)
+      << env_->getTime(err) << std::endl
+      << me_
+      << "status of branch-and-bound = " << getSolveStatusString(status_)
+      << std::endl;
+    env_->stopTimer(err);
+  } else {
+    out
+      << me_ << std::fixed << std::setprecision(4)
+      << "best solution value = " << INFINITY << std::endl
+      << me_ << std::fixed << std::setprecision(4)
+      << "best bound estimate from remaining nodes = " << INFINITY
+      << std::endl
+      << me_ << "gap = " << INFINITY << std::endl
+      << me_ << "gap percentage = " << INFINITY << std::endl
+      << me_ << "time used (s) = " << std::fixed << std::setprecision(2)
+      << env_->getTime(err) << std::endl
+      << me_
+      << "status of branch-and-bound: " << getSolveStatusString(NotStarted)
+      << std::endl;
+    env_->stopTimer(err);
+  }
+
+  /* out << "----------------------------------------------------------------------------------------------\n\n"; */
+  env_->getLogger()->msgStream(LogInfo) << out.str();
   return err;
 }

@@ -13,6 +13,7 @@ namespace Minotaur {
       virtual ~MpiBranchAndBound();
 
       void solve() override;
+      void showStatus_(bool current_uncounted, bool last_line) override;
 
     private:
       void collectData_();

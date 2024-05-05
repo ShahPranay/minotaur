@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <vector>
 #include <iostream>
+#include <iomanip>
 
 #include "mpi.h"
 #include "MpiBranchAndBound.h"
@@ -50,7 +51,7 @@ bool MpiBranchAndBound::shouldBalanceLoad_()
 // returns new current_node
 NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
 {
-  cout << "Insider load balance" << endl;
+  /* cout << "Insider load balance" << endl; */
   constexpr unsigned MIN_NODES_PER_RANK = 1;
   constexpr double MAX_LB = INFINITY;
   unsigned num_send_nodes = MIN_NODES_PER_RANK * comm_world_size_, num_tot_nodes = num_send_nodes * comm_world_size_;
@@ -148,6 +149,7 @@ NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
       /* std::cout << "Message size = " << msg.size() << std::endl; */
       // need to maintain buffers and requests for Isend.
       MPI_Send((void *) &(msg[0]), msg.size(), MPI_CHAR, receiver_rank, 0, MPI_COMM_WORLD);
+      tm_->sentNode();
     }
   }
 
@@ -249,7 +251,7 @@ void MpiBranchAndBound::solve()
   while(!all_finished_) {
     collectData_();
 
-    if (shouldBalanceLoad_())
+    if (!current_node || shouldBalanceLoad_())
       current_node = LoadBalance_(current_node);
 
     if(!current_node)
@@ -357,19 +359,80 @@ void MpiBranchAndBound::solve()
   }
 
   if (mpirank_ == 0)
-  {
     showStatus_(false, true);
-    //logger_->msgStream(LogError) << " " << std::endl;
+  //logger_->msgStream(LogError) << " " << std::endl;
 
-    logger_->msgStream(LogError) << "----------------------------------------------------------------------------------------------" << std::endl;
-    logger_->msgStream(LogError) << " " << std::endl;
+  std::ostringstream out;
+  out << "----------------------------------------------------------------------------------------------" << std::endl;
+  out << "Tree Stats for Rank " << mpirank_ << ":" << std::endl;
 
-    logger_->msgStream(LogInfo) << me_ << "stopping branch-and-bound"
-      << std::endl
-      << me_ << "nodes processed = " << stats_->nodesProc << std::endl
-      << me_ << "nodes created   = " << tm_->getSize() << std::endl;
-  } 
+  out<< me_ << "stopping branch-and-bound"
+    << std::endl
+    << me_ << "nodes processed = " << stats_->nodesProc << std::endl
+    << me_ << "nodes created   = " << tm_->getSize() << std::endl;
+
+  logger_->msgStream(LogInfo) << out.str();
+
   stats_->timeUsed = timer_->query();
   timer_->stop();
   lb_timer_->stop();
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+void MpiBranchAndBound::showStatus_(bool current_uncounted, bool last_line)
+{
+  static bool header = false;
+  static bool firstRow = true; // Add a flag for the first row
+
+  UInt off = 0;
+  if (current_uncounted) {
+    off = 1;
+  }
+
+  std::streamsize defaultPrecision = logger_->msgStream(LogError).precision(); // Store default precision
+
+  if (!header) {
+    logger_->msgStream(LogError) << " " << std::endl;	  
+    logger_->msgStream(LogError) << "----------------------------------------------------------------------------------------------" << std::endl;
+    logger_->msgStream(LogError) << std::setw(7) << "Cpu(s)"
+      << std::setw(10) << "Wall(s)"
+      << std::setw(16) << "LB"
+      << std::setw(13) << "UB"
+      << std::setw(12) << "Gap%"
+      << std::setw(15) << "   Nodes-Proc"
+      << std::setw(14) << "   Nodes-Rem"
+      << std::setw(7) << "#Sol"
+      << std::endl;
+    logger_->msgStream(LogError) << "----------------------------------------------------------------------------------------------" << std::endl;
+    header = true;
+  }
+
+  if (firstRow) {
+    // Print the initial row with all values set to zero
+    logger_->msgStream(LogError) << std::setw(6) << "0"
+      << std::setw(10) << "0"
+      << std::setw(17) << "-inf"
+      << std::setw(13) << "inf"
+      << std::setw(12) << "inf"
+      << std::setw(15) << "0"
+      << std::setw(14) << "0"
+      << std::setw(7) << "0"
+      << std::endl;
+    firstRow = false;
+  }
+
+  if (timer_->query() - stats_->updateTime > options_->logInterval || last_line == true) {
+    logger_->msgStream(LogError).precision(defaultPrecision); // Reset precision to default
+    logger_->msgStream(LogError) << std::setw(6) << std::fixed << std::setprecision(0) << timer_->query()
+      << std::setw(10) << std::fixed << std::setprecision(0) << timer_->wQuery() // Print wall time
+      << std::setw(17) << std::setprecision(4) << std::scientific << tm_->updateLb()
+      << std::setw(13) << std::setprecision(4) << std::scientific << tm_->getUb()
+      << std::setw(12) << std::setprecision(2) << std::scientific << tm_->getPerGap()
+      << std::setw(15) << tm_->getSize() - tm_->getActiveNodes() - off
+      << std::setw(14) << tm_->getActiveNodes() + off
+      << std::setw(7) << std::setprecision(5) << solPool_->getNumSolsFound()
+      << std::endl;
+    stats_->updateTime = timer_->query();
+  }
 }
