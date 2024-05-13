@@ -44,15 +44,14 @@ bool MpiBranchAndBound::shouldBalanceLoad_()
   static double lb_frequency = 5;
   if (lb_timer_->query() < lb_frequency)
     return false;
-  lb_frequency += 1;
+  /* lb_frequency += 1; */
   return true;
 }
 
 // returns new current_node
 NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
 {
-  /* cout << "Insider load balance" << endl; */
-  constexpr unsigned MIN_NODES_PER_RANK = 1;
+  constexpr unsigned MIN_NODES_PER_RANK = 10;
   constexpr double MAX_LB = INFINITY;
   unsigned num_send_nodes = MIN_NODES_PER_RANK * comm_world_size_, num_tot_nodes = num_send_nodes * comm_world_size_;
 
@@ -342,6 +341,10 @@ void MpiBranchAndBound::solve()
     /* } */
   }
 
+  double tmpub = tm_->getUb();
+  MPI_Allreduce(MPI_IN_PLACE, &tmpub, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+  tm_->setUb(tmpub);
+
   // TODO:modify to execute only when shouldStop_() did not quit solver
   if (true){
     tm_->updateLb();
@@ -358,20 +361,42 @@ void MpiBranchAndBound::solve()
 #endif
   }
 
+  // get all data to rank 1
   if (mpirank_ == 0)
+  {
     showStatus_(false, true);
-  //logger_->msgStream(LogError) << " " << std::endl;
+    logger_->msgStream(LogError) << "----------------------------------------------------------------------------------------------" << std::endl;
+    logger_->msgStream(LogError) << " " << std::endl;
 
-  std::ostringstream out;
-  out << "----------------------------------------------------------------------------------------------" << std::endl;
-  out << "Tree Stats for Rank " << mpirank_ << ":" << std::endl;
+    std::vector<unsigned> allstats(2 * comm_world_size_), curstats(2);
+    curstats[0] = stats_->nodesProc;
+    curstats[1] = tm_->getSize();
+    MPI_Gather(&curstats[0], 2, MPI_UNSIGNED, &allstats[0], 2, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
 
-  out<< me_ << "stopping branch-and-bound"
-    << std::endl
-    << me_ << "nodes processed = " << stats_->nodesProc << std::endl
-    << me_ << "nodes created   = " << tm_->getSize() << std::endl;
+    std::ostringstream out;
+    out << me_ << "stopping branch-and-bound" << std::endl;
+    out << "-------------------------------------------------" << std::endl;
+    out << std::setw(15) << "MPI Rank"
+      << std::setw(15) << "Nodes Proc"
+      << std::setw(15) << "Nodes Created" << std::endl;
+    out << "-------------------------------------------------" << std::endl;
 
-  logger_->msgStream(LogInfo) << out.str();
+    for (unsigned i = 0; i < comm_world_size_; i++)
+    {
+      out << std::setw(15) << i
+        << std::setw(15) << allstats[2 * i]
+        << std::setw(15) << allstats[2 * i + 1] << std::endl;
+    }
+    out << "-------------------------------------------------" << std::endl;
+    logger_->msgStream(LogInfo) << out.str();
+  }
+  else
+  {
+    std::vector<unsigned> curstats(2);
+    curstats[0] = stats_->nodesProc;
+    curstats[1] = tm_->getSize();
+    MPI_Gather(&curstats[0], 2, MPI_UNSIGNED, &curstats[0], 2, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+  }
 
   stats_->timeUsed = timer_->query();
   timer_->stop();

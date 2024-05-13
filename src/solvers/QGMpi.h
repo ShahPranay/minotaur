@@ -10,7 +10,6 @@ namespace Minotaur {
       using QG::QG;
 
       virtual int solve(ProblemPtr p);
-      virtual int writeBnbStatus_(BranchAndBound *bab);
   };
 }
 

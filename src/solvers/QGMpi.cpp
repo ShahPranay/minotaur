@@ -251,7 +251,8 @@ int QGMpi::solve(ProblemPtr p)
   if(err) {
     goto CLEANUP;
   }
-  err = writeBnbStatus_(bab);
+  if (mpirank == 0)
+    err = writeBnbStatus_(bab);
 
 CLEANUP:
   for(HandlerVector::iterator it = handlers.begin(); it != handlers.end();
@@ -290,50 +291,4 @@ CLEANUP:
   return err;
 }
 
-int QGMpi::writeBnbStatus_(BranchAndBound* bab)
-{
-  int err = 0;
-  std::ostringstream out;
 
-  int mpirank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
-
-  out << "----------------------------------------------------------------------------------------------\n";
-  out << "Bnb End Stats for Rank " << mpirank << ":\n\n";
-
-  if(bab) {
-    out
-      << me_ << std::fixed << std::setprecision(4)
-      << "best solution value = " << objSense_ * ub_ << std::endl
-      << me_ << std::fixed << std::setprecision(4)
-      << "best bound estimate from remaining nodes = " << objSense_ * lb_
-      << std::endl
-      << me_ << "gap = " << std::max(0.0, ub_ - lb_) << std::endl
-      << me_ << "gap percentage = " << bab->getPerGap() << std::endl
-      << me_ << "time used (s) = " << std::fixed << std::setprecision(2)
-      << env_->getTime(err) << std::endl
-      << me_
-      << "status of branch-and-bound = " << getSolveStatusString(status_)
-      << std::endl;
-    env_->stopTimer(err);
-  } else {
-    out
-      << me_ << std::fixed << std::setprecision(4)
-      << "best solution value = " << INFINITY << std::endl
-      << me_ << std::fixed << std::setprecision(4)
-      << "best bound estimate from remaining nodes = " << INFINITY
-      << std::endl
-      << me_ << "gap = " << INFINITY << std::endl
-      << me_ << "gap percentage = " << INFINITY << std::endl
-      << me_ << "time used (s) = " << std::fixed << std::setprecision(2)
-      << env_->getTime(err) << std::endl
-      << me_
-      << "status of branch-and-bound: " << getSolveStatusString(NotStarted)
-      << std::endl;
-    env_->stopTimer(err);
-  }
-
-  /* out << "----------------------------------------------------------------------------------------------\n\n"; */
-  env_->getLogger()->msgStream(LogInfo) << out.str();
-  return err;
-}

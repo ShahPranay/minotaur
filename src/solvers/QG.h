@@ -69,7 +69,7 @@ namespace Minotaur {
       int getEngines_(Engine **nlp_e, LPEngine **lp_e);
       PresolverPtr presolve_(HandlerVector &handlers);
       void setInitialOptions_();
-      virtual int writeBnbStatus_(BranchAndBound *bab);
+      int writeBnbStatus_(BranchAndBound *bab);
   };
 }
 #endif
