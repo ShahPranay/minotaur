@@ -41,10 +41,11 @@ void MpiBranchAndBound::collectData_()
 
 bool MpiBranchAndBound::shouldBalanceLoad_()
 {
-  static double lb_frequency = 5;
+  static double lb_frequency = 0.5;
   if (lb_timer_->query() < lb_frequency)
     return false;
-  /* lb_frequency += 1; */
+  if (lb_frequency < 5)
+    lb_frequency += 0.5;
   return true;
 }
 
