@@ -41,11 +41,11 @@ void MpiBranchAndBound::collectData_()
 
 bool MpiBranchAndBound::shouldBalanceLoad_()
 {
-  static double lb_frequency = 0.5;
+  static double lb_frequency = 0.1;
   if (lb_timer_->query() < lb_frequency)
     return false;
-  if (lb_frequency < 5)
-    lb_frequency += 0.5;
+  if (lb_frequency < 3)
+    lb_frequency += 0.1;
   return true;
 }
 
@@ -246,13 +246,17 @@ void MpiBranchAndBound::solve()
   }
 
   lb_timer_->start();
+  int times_balanced = 0;
 
   // solve root outside the loop. save the useful information.
   while(!all_finished_) {
     collectData_();
 
     if (!current_node || shouldBalanceLoad_())
+    {
+      times_balanced += 1;
       current_node = LoadBalance_(current_node);
+    }
 
     if(!current_node)
       continue;
@@ -389,6 +393,7 @@ void MpiBranchAndBound::solve()
         << std::setw(15) << allstats[2 * i + 1] << std::endl;
     }
     out << "-------------------------------------------------" << std::endl;
+    out << "Number of times balanced = " << times_balanced << std::endl;
     logger_->msgStream(LogInfo) << out.str();
   }
   else
