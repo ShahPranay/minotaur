@@ -3,7 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <filesystem>
+/* #include <filesystem> */
 
 #include "MinotaurConfig.h"
 #include "Environment.h"
@@ -14,7 +14,7 @@
 
 using namespace Minotaur;
 
-std::string share_problem_file(std::string);
+/* std::string share_problem_file(std::string); */
 
 int main(int argc, char** argv)
 {
@@ -51,14 +51,14 @@ int main(int argc, char** argv)
   // modify so that only rank 0 reads the problem and sends it to all others.
   // read the file and broadcast its contents to all others
 
-  fname = share_problem_file(fname);
+  /* fname = share_problem_file(fname); */
 
   p = qg.readProblem(fname, dname, "mqg", err);
 
-  if (mpirank != 0)
-  {
-    std::filesystem::remove(fname);
-  }
+  /* if (mpirank != 0) */
+  /* { */
+  /*   std::filesystem::remove(fname); */
+  /* } */
 
   if (err) {
     goto CLEANUP;
