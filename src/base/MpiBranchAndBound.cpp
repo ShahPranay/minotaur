@@ -44,15 +44,15 @@ bool MpiBranchAndBound::shouldBalanceLoad_()
   static double lb_frequency = 0.1;
   if (lb_timer_->query() < lb_frequency)
     return false;
-  if (lb_frequency < 3)
-    lb_frequency += 0.1;
+  if (lb_frequency < 4)
+    lb_frequency += 0.75;
   return true;
 }
 
 // returns new current_node
 NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
 {
-  constexpr unsigned MIN_NODES_PER_RANK = 50;
+  constexpr unsigned MIN_NODES_PER_RANK = 75;
   constexpr double MAX_LB = INFINITY;
   unsigned num_send_nodes = MIN_NODES_PER_RANK * comm_world_size_, num_tot_nodes = num_send_nodes * comm_world_size_;
 
