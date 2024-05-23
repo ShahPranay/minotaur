@@ -22,8 +22,7 @@ MpiBranchAndBound::~MpiBranchAndBound()
 
 }
 
-void MpiBranchAndBound::collectData_()
-{
+void MpiBranchAndBound::collectData_() {
   int ismsg = 0;
   double value;
   while(true)
