@@ -11,9 +11,11 @@ namespace Minotaur {
 
       /// Destroy.
       virtual ~MpiBranchAndBound();
+      int getStatusFlag();
 
       void solve() override;
       void showStatus_(bool current_uncounted, bool last_line) override;
+      bool shouldStop_() override;
 
     private:
       void collectData_();

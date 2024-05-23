@@ -22,6 +22,17 @@ MpiBranchAndBound::~MpiBranchAndBound()
 
 }
 
+int MpiBranchAndBound::getStatusFlag()
+{
+  if (status_ == TimeLimitReached)
+    return 1;
+  else if (status_ == IterationLimitReached)
+    return 2;
+  else if (status_ == SolLimitReached)
+    return 4;
+  else return 0;
+}
+
 void MpiBranchAndBound::collectData_()
 {
   int ismsg = 0;
@@ -44,9 +55,20 @@ bool MpiBranchAndBound::shouldBalanceLoad_()
   static double lb_frequency = 0.1;
   if (lb_timer_->query() < lb_frequency)
     return false;
-  if (lb_frequency < 4)
-    lb_frequency += 0.75;
+  if (lb_frequency < 5)
+    lb_frequency += 0.1;
   return true;
+}
+
+static SolveStatus flagToStatus(int flag)
+{
+  if (flag & 1)
+    return TimeLimitReached;
+  else if (flag & 2)
+    return IterationLimitReached;
+  else if (flag & 4)
+    return SolLimitReached;
+  else return NotStarted;
 }
 
 // returns new current_node
@@ -55,6 +77,17 @@ NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
   constexpr unsigned MIN_NODES_PER_RANK = 75;
   constexpr double MAX_LB = INFINITY;
   unsigned num_send_nodes = MIN_NODES_PER_RANK * comm_world_size_, num_tot_nodes = num_send_nodes * comm_world_size_;
+
+  shouldStop_();
+
+  int statusflag = getStatusFlag();
+  MPI_Allreduce(MPI_IN_PLACE, &statusflag, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+  if (statusflag != 0)
+  {
+    status_ = flagToStatus(statusflag);
+    all_finished_ = true;
+    return nullptr;
+  }
 
   std::vector<double> myLbs, worldLbs(num_tot_nodes, 9);
   std::vector<NodePtr> poppedNodes;
@@ -351,7 +384,7 @@ void MpiBranchAndBound::solve()
   tm_->setUb(tmpub);
 
   // TODO:modify to execute only when shouldStop_() did not quit solver
-  if (true){
+  if (!shouldStop_()){
     tm_->updateLb();
     if (tm_->getUb() <= -INFINITY) {
       status_ = SolvedUnbounded;
@@ -466,4 +499,27 @@ void MpiBranchAndBound::showStatus_(bool current_uncounted, bool last_line)
       << std::endl;
     stats_->updateTime = timer_->query();
   }
+}
+
+bool MpiBranchAndBound::shouldStop_()
+{
+  bool stop_bnb = false;
+
+  /*if ( tm_->getPerGap() <= options_->perGapLimit) {*/
+  /*  stop_bnb = true;*/
+  /*  status_ = SolvedGapLimit;*/
+  /*}*/
+
+  if (timer_->query() > options_->timeLimit) {
+    stop_bnb = true;
+    status_ = TimeLimitReached;
+  } else if (stats_->nodesProc >= options_->nodeLimit) {
+    stop_bnb = true;
+    status_ = IterationLimitReached;
+  } else if (solPool_->getNumSolsFound()>=options_->solLimit) { 
+    stop_bnb = true;
+    status_ = SolLimitReached;
+  }
+
+  return stop_bnb;
 }

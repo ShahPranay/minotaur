@@ -220,7 +220,7 @@ namespace Minotaur {
      * \brief Check whether the branch-and-bound can stop because of time
      * limit, or node limit or if solved?
      */
-    bool shouldStop_();
+    virtual bool shouldStop_();
 
     /**
      * \brief Display status: number of nodes, bounds, time etc.
