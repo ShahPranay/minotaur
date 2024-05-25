@@ -12,9 +12,9 @@ using namespace Minotaur;
 using std::cout, std::endl;
 
 MpiBranchAndBound::MpiBranchAndBound(EnvPtr env, ProblemPtr p, int &cur_rank, int &comm_world_size) :
-  BranchAndBound(env, p), mpirank_(cur_rank), comm_world_size_(comm_world_size), all_finished_(false)
+  BranchAndBound(env, p), mpirank_(cur_rank), comm_world_size_(comm_world_size), all_finished_(false), lb_frequency_(comm_world_size)
 {
-  lb_timer_ = env->getNewTimer();
+  /*lb_timer_ = env->getNewTimer();*/
 }
 
 MpiBranchAndBound::~MpiBranchAndBound()
@@ -52,12 +52,16 @@ void MpiBranchAndBound::collectData_()
 
 bool MpiBranchAndBound::shouldBalanceLoad_()
 {
-  static double lb_frequency = 0.1;
-  if (lb_timer_->query() < lb_frequency)
-    return false;
-  if (lb_frequency < 5)
-    lb_frequency += 0.1;
+  /*if (lb_timer_->query() < lb_frequency_)*/
+  /*  return false;*/
   return true;
+}
+
+void MpiBranchAndBound::updateLbFrequency_(std::vector<double> &worldLbs)
+{
+  lb_frequency_ = 50 * comm_world_size_;
+  /*int cnt = 0;*/
+  /*double sum = 0, sqsum = 0;*/
 }
 
 static SolveStatus flagToStatus(int flag)
@@ -74,7 +78,7 @@ static SolveStatus flagToStatus(int flag)
 // returns new current_node
 NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
 {
-  constexpr unsigned MIN_NODES_PER_RANK = 75;
+  constexpr unsigned MIN_NODES_PER_RANK = 50;
   constexpr double MAX_LB = INFINITY;
   unsigned num_send_nodes = MIN_NODES_PER_RANK * comm_world_size_, num_tot_nodes = num_send_nodes * comm_world_size_;
 
@@ -105,6 +109,8 @@ NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
 
   MPI_Allgather(&myLbs[0], num_send_nodes, MPI_DOUBLE, &worldLbs[0], num_send_nodes, MPI_DOUBLE, MPI_COMM_WORLD);
 
+  updateLbFrequency_(worldLbs);
+
   struct NodeInfo
   {
     unsigned owner_rank, local_index;
@@ -130,15 +136,6 @@ NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
   }
 
   std::sort(worldNodeInfos.begin(), worldNodeInfos.end(), cmpNodeInfo);
-
-  /* if (mpirank_ == 0) */
-  /* { */
-    /* cout << "worldNodeInfos::" << endl; */
-    /* for (auto curinfo : worldNodeInfos) */
-    /* { */
-      /* cout << "Node Owner: "<< curinfo.owner_rank << ", Node Lb: " << curinfo.Lb << endl; */
-    /* } */
-  /* } */
 
   if ( worldNodeInfos[0].Lb == MAX_LB ){
     all_finished_ = true;
@@ -168,7 +165,7 @@ NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
         int count;
         MPI_Get_count(&status, MPI_CHAR, &count);
 
-        cout << count << endl;
+        /*cout << count << endl;*/
 
         std::string tmpbuf(count, '*');
         MPI_Recv((void *) &(tmpbuf[0]), count, MPI_CHAR, curinfo.owner_rank, 0, MPI_COMM_WORLD, &status);
@@ -193,8 +190,8 @@ NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
     }
   }
 
-  lb_timer_->stop();
-  lb_timer_->start();
+  /*lb_timer_->stop();*/
+  /*lb_timer_->start();*/
   /* cout << endl; */
 
   return tm_->getCandidate();
@@ -285,21 +282,24 @@ void MpiBranchAndBound::solve()
     }
   }
 
-  lb_timer_->start();
-  int times_balanced = 0;
+  /*lb_timer_->start();*/
+  int times_balanced = 0, itr_since_last_balance = 0;
 
   // solve root outside the loop. save the useful information.
   while(!all_finished_) {
     collectData_();
 
-    if (!current_node || shouldBalanceLoad_())
+    if (!current_node || itr_since_last_balance == lb_frequency_)
     {
       times_balanced += 1;
       current_node = LoadBalance_(current_node);
+      itr_since_last_balance = 0;
     }
 
     if(!current_node)
       continue;
+
+    itr_since_last_balance++;
 
     /* cout << "Rank " << mpirank_ << "; Processing; No. ActiveNodes = " << tm_->getActiveNodes() << "; Current NodeID = " << current_node->getId() << "; Lb = " << current_node->getLb() << endl; */
 
@@ -321,9 +321,12 @@ void MpiBranchAndBound::solve()
       current_node->getLb() << std::endl;
 #endif
 
-    if (nodePrcssr_->foundNewSolution()) {
-      tm_->setUb(solPool_->getBestSolutionValue());
-      sendToAll_(solPool_->getBestSolutionValue());
+    if (nodePrcssr_->foundNewSolution()) 
+    {
+      double solval = solPool_->getBestSolutionValue();
+      if (solval < tm_->getUb())
+        tm_->setUb(solval);
+      sendToAll_(solval);
     }
 
     should_prune = shouldPrune_(current_node);
@@ -446,7 +449,7 @@ void MpiBranchAndBound::solve()
 
   stats_->timeUsed = timer_->query();
   timer_->stop();
-  lb_timer_->stop();
+  /*lb_timer_->stop();*/
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
