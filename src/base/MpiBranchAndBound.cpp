@@ -82,8 +82,6 @@ NodePtr MpiBranchAndBound::LoadBalance_(NodePtr current_node)
   constexpr double MAX_LB = INFINITY;
   unsigned num_send_nodes = MIN_NODES_PER_RANK * comm_world_size_, num_tot_nodes = num_send_nodes * comm_world_size_;
 
-  shouldStop_();
-
   int statusflag = getStatusFlag();
   MPI_Allreduce(MPI_IN_PLACE, &statusflag, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
   if (statusflag != 0)
@@ -289,7 +287,7 @@ void MpiBranchAndBound::solve()
   while(!all_finished_) {
     collectData_();
 
-    if (!current_node || itr_since_last_balance == lb_frequency_)
+    if (shouldStop_() || !current_node || itr_since_last_balance == lb_frequency_)
     {
       times_balanced += 1;
       current_node = LoadBalance_(current_node);
