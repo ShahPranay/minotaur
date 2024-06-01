@@ -35,16 +35,6 @@ class VarBoundMod : public Modification {
   /// Destroy.
   ~VarBoundMod();
 
-  /**
-   * Check equality (equivalance) of VarBoundMod object to a Modification object. Implemented for testing purposes
-   */ 
-  virtual bool operator==(const Modification &otherMod) const;
-
-  /**
-   * Check equality (equivalance) of two VarBoundMod objects. Implemented for testing purposes
-   */ 
-  bool operator==(const VarBoundMod &otherMod) const;
-
   // base class method.
   ModificationPtr fromRel(RelaxationPtr, ProblemPtr) const;
 

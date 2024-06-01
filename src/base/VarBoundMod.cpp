@@ -47,28 +47,6 @@ VarBoundMod::~VarBoundMod()
   var_= 0;
 }
 
-/**
- * Tentative implementation
- */
-bool VarBoundMod::operator==(const Modification &otherMod) const {
-  const VarBoundMod * other_vbm = dynamic_cast<const VarBoundMod *>(&otherMod);
-  
-  if(!other_vbm)
-    return false;
-  else return (*this == *other_vbm);
-}
-
-/**
- * Tentative implementation
- */
-bool VarBoundMod::operator==(const VarBoundMod &otherMod) const 
-{
-  return (var_->getId() == otherMod.var_->getId()) && 
-    (lu_ == otherMod.lu_) && 
-    (newVal_ == otherMod.newVal_) &&
-    (oldVal_ == otherMod.oldVal_);
-}
-
 ModificationPtr VarBoundMod::fromRel(RelaxationPtr rel, ProblemPtr) const
 {
   VarBoundModPtr mod = (VarBoundModPtr) new VarBoundMod(

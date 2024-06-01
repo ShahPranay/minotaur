@@ -35,12 +35,6 @@ namespace Minotaur {
       /// Default destroy
       virtual ~Modification() {};
 
-      /*
-       * Check the equality (equivalance) of two modification objects. Implemented for testing purposes.
-       * Tentative implementation, need to modify to incorporate other modifications.
-       */
-      virtual bool operator==([[maybe_unused]] const Modification &otherMod) const { return false; };
-
       /**
        * \brief Covert a modification for a relaxation to one for its original
        * problem. 
