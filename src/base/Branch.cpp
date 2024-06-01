@@ -15,6 +15,7 @@
 
 #include "MinotaurConfig.h"
 #include "BrCand.h"
+#include "VarBoundMod.h"
 #include "Branch.h"
 #include "Modification.h"
 #include "Operations.h"
@@ -32,7 +33,6 @@ Branch::Branch()
 {
 
 }
-
 
 Branch::~Branch()
 {
@@ -55,6 +55,27 @@ Branch::~Branch()
       brCand_->decrBranches();
     }
   }
+}
+
+/**
+ * Tentative implementation, checks whether all modifications are equal or not
+ */
+bool Branch::operator==(const Branch &otherBranch) const {
+  bool res = true; 
+
+  res = (activity_ == otherBranch.activity_);
+
+  res = res && (rMods_.size() == otherBranch.rMods_.size());
+
+  if(!res)
+    return res;
+
+  for( size_t i = 0; i < rMods_.size(); i++ )
+  {
+    res = res && (*rMods_[i] == *otherBranch.rMods_[i]);
+  }
+
+  return res;
 }
 
 

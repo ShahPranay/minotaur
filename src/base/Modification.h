@@ -35,6 +35,12 @@ namespace Minotaur {
       /// Default destroy
       virtual ~Modification() {};
 
+      /*
+       * Check the equality (equivalance) of two modification objects. Implemented for testing purposes.
+       * Tentative implementation, need to modify to incorporate other modifications.
+       */
+      virtual bool operator==([[maybe_unused]] const Modification &otherMod) const { return false; };
+
       /**
        * \brief Covert a modification for a relaxation to one for its original
        * problem. 
@@ -62,6 +68,9 @@ namespace Minotaur {
 
       /// Write it to 'out'.
       virtual void write(std::ostream &out) const = 0;
+
+      // default funtion definition, will need to be implemented for all derived classes. done for {varboundmod}
+      virtual std::string serialize() {return "";};
   };   
 
 }

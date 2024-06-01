@@ -58,7 +58,7 @@ namespace Minotaur {
       /// Return the lower bound for the optimal value
       double getLb() {return lb_;};
 
-    private:
+    protected:
       const static std::string me_;
       double objSense_;
       SolutionPtr sol_;

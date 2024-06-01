@@ -98,6 +98,17 @@ else()
 endif()
 
 ###########################################################################
+## MPI is a requirement 
+###########################################################################
+FIND_PACKAGE(MPI)
+if(MPI_FOUND)
+  message(STATUS ${MSG_HEAD} "MPI support detected.")
+else()
+  message(FATAL_ERROR
+  ${MSG_HEAD} "MPI is required, but was not found")
+endif()
+
+###########################################################################
 ## getrusage
 ###########################################################################
 set (MINOTAUR_RUSAGE) ## NULL

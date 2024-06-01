@@ -355,6 +355,9 @@ ModificationRConstIterator;
 typedef std::deque<ModificationPtr> ModQ;
 typedef std::stack<ModificationPtr> ModStack;
 
+class   VarBoundMod;
+typedef VarBoundMod* VarBoundModPtr;
+
 class   Branch;
 typedef Branch* BranchPtr;
 typedef const Branch* ConstBranchPtr;  
@@ -520,6 +523,10 @@ VarCountConstMap;
 class   Heuristic;
 typedef Heuristic* HeurPtr;
 typedef std::vector<HeurPtr> HeurVector;
+
+/// Serializer class
+class Serializer;
+class DeSerializer;
 }
 
 #endif

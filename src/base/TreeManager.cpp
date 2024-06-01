@@ -11,6 +11,7 @@
  */
 
 #include <cmath>
+#include <iostream>
 
 #include "MinotaurConfig.h"
 #include "Branch.h"
@@ -29,6 +30,7 @@ TreeManager::TreeManager(EnvPtr env)
   doVbc_(false),
   etol_(1e-6),
   size_(0),
+  nextID_(0),
   timer_(0)
 {
   std::string s = env->getOptions()->findString("tree_search")->getValue();
@@ -232,10 +234,11 @@ void TreeManager::insertCandidate_(NodePtr node, bool pop_now)
   assert(size_>0);
 
   // set node id and depth
-  node->setId(size_);
+  node->setId(nextID_);
   node->setDepth(node->getParent()->getDepth()+1);
 
   ++size_;
+  ++nextID_;
 
   // add node to the heap/stack of active nodes. If pop_now is true, the node
   // is processed right after creating it; we don't
@@ -251,6 +254,27 @@ void TreeManager::insertCandidate_(NodePtr node, bool pop_now)
 }
 
 
+void TreeManager::insertRecvCandidate(NodePtr node)
+{
+  node->setId(nextID_);
+
+  ++nextID_;
+  ++size_;
+
+  activeNodes_->push(node);
+}
+
+
+void TreeManager::insertPoppedCandidate(NodePtr node)
+{
+  activeNodes_->push(node);
+}
+
+void TreeManager::sentNode()
+{
+  --size_;
+}
+
 void TreeManager::insertRoot(NodePtr node)
 {
   assert(size_==0);
@@ -260,6 +284,7 @@ void TreeManager::insertRoot(NodePtr node)
   node->setDepth(0);
   activeNodes_->push(node);
   ++size_;
+  ++nextID_;
   if (doVbc_) {
     // father node color
     vbcFile_ << toClockTime(timer_->query()) << " N 0 1 " << VbcSolving
@@ -298,7 +323,9 @@ void TreeManager::removeNode_(NodePtr node)
   NodePtr  parent = node->getParent();;
   NodePtrIterator node_i;
 
-  if (node->getId()>0) {
+
+  // assume that even root can be removed
+  if (parent && node->getId()>0) {
     // Find the iterator corresponding to this node
     for (node_i = parent->childrenBegin(); node_i != parent->childrenEnd(); 
         ++node_i) {

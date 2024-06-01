@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 #include "MinotaurConfig.h"
 #include "Node.h"
@@ -106,13 +107,14 @@ UInt NodeHeap::getDeepestLevel() const
 }
 
 
-void NodeHeap::write(std::ostream &) const
+void NodeHeap::write(std::ostream &o) const
 {
-   //for(std::vector<NodePtr>::const_iterator it = nodes_.begin();
-   //    it != nodes_.end(); it++) {
-   //   ConstNodePtr n = *it;
-   //   //o << (*n) << endl;
-   //}
+   /* for(std::vector<NodePtr>::const_iterator it = nodes_.begin(); */
+   /*     it != nodes_.end(); it++) { */
+   /*    ConstNodePtr n = *it; */
+   /*    o << n->getId() << " "; */
+   /* //   //o << (*n) << endl; */
+   /* } */
 }
 
 

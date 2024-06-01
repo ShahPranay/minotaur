@@ -66,6 +66,13 @@ namespace Minotaur {
     /// Default destructor.
     virtual ~Node();
 
+    /**
+     * Check equality (equivalance) of two Node objects. Implemented for testing purposes
+     */ 
+    bool operator==(const Node &otherNode) const;
+
+    BranchPtr getBranch();
+
     /// Add a child node.
     void addChild(NodePtr childNode);
 

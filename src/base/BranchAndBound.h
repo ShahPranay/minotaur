@@ -142,7 +142,7 @@ namespace Minotaur {
     void shouldCreateRoot(bool b);
 
     /// Start solving the Problem using branch-and-bound
-    void solve();
+    virtual void solve();
 
     /// Return total time taken
     double totalTime();
@@ -153,7 +153,7 @@ namespace Minotaur {
     /// Write statistics to the logger
     void writeStats();
 
-  private:
+  protected:
     /// Pointer to the enviroment.
     EnvPtr env_;
 
@@ -220,7 +220,7 @@ namespace Minotaur {
      * \brief Check whether the branch-and-bound can stop because of time
      * limit, or node limit or if solved?
      */
-    bool shouldStop_();
+    virtual bool shouldStop_();
 
     /**
      * \brief Display status: number of nodes, bounds, time etc.
@@ -229,7 +229,7 @@ namespace Minotaur {
      * log-message is incremented by one. This may happen when diving: the
      * node being processed is not in the list of active nodes in the tree.
      */
-    void showStatus_(bool current_uncounted,bool last_line);
+    virtual void showStatus_(bool current_uncounted,bool last_line);
   };
 
   /// Statistics about the branch-and-bound.

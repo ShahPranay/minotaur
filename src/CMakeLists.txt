@@ -64,6 +64,7 @@ set (MINOTAUR_SOURCES
      base/Logger.cpp 
      base/MaxFreqBrancher.cpp
      base/MaxVioBrancher.cpp
+     base/MpiBranchAndBound.cpp
      base/MINLPDiving.cpp
      #base/MultiSolHeur.cpp
      base/MsProcessor.cpp	
@@ -119,6 +120,7 @@ set (MINOTAUR_SOURCES
      base/ReliabilityBrancher.cpp 
      base/Reader.cpp 
      base/SecantMod.cpp 
+     base/Serializer.cpp
      base/SimpleCutMan.cpp 
      base/SimpleTransformer.cpp
      base/SimplexQuadCutGen.cpp
@@ -200,6 +202,7 @@ set (MINOTAUR_HEADERS
      base/LPRelaxation.h
      base/MaxFreqBrancher.h
      base/MaxVioBrancher.h
+     base/MpiBranchAndBound.h
      base/MILPEngine.h
      base/MINLPDiving.h
      #base/MultiSolHeur.h
@@ -261,6 +264,7 @@ set (MINOTAUR_HEADERS
      base/Relaxation.h
      base/ReliabilityBrancher.h
      base/SecantMod.h
+     base/Serializer.h
      base/SimpleCutMan.h 
      base/SimpleTransformer.h
      base/SimplexQuadCutGen.h
@@ -425,6 +429,10 @@ if (MNTR_EXTRA_LIBS)
   list(APPEND ALL_EXEC_LIBS "${MNTR_EXTRA_LIBS}")
 endif()
 
+if (${MPI_FOUND})
+  list(APPEND ALL_EXEC_LIBS "${MPI_CXX_LIBRARIES}")
+endif()
+
 message(STATUS ${MSG_HEAD} "ALL_EXEC_LIBS =  ${ALL_EXEC_LIBS}")
 list(REVERSE ALL_EXEC_LIBS)
 list(REMOVE_DUPLICATES ALL_EXEC_LIBS)
@@ -439,6 +447,7 @@ if (IFACE_SOURCES)
     solvers/Glob.cpp 
     solvers/MultiStart.cpp 
     solvers/QG.cpp 
+    solvers/QGMpi.cpp
   )
   set (SOLVER_HEADERS
     solvers/Solver.h
@@ -446,6 +455,7 @@ if (IFACE_SOURCES)
     solvers/Glob.h 
     solvers/MultiStart.h 
     solvers/QG.h 
+    solvers/QGMpi.h
   )
 endif()
 
@@ -495,7 +505,15 @@ if (IFACE_SOURCES)
   target_link_libraries(mmultistart ${ALL_EXEC_LIBS})
   install(TARGETS mmultistart RUNTIME DESTINATION bin)
   set_target_properties(mmultistart PROPERTIES INSTALL_RPATH "${MNTR_INSTALL_RPATH}")
-  
+ 
+endif()
+
+if(${MPI_FOUND})
+  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+  add_executable(mqgmpi solvers/QGMpiMain.cpp)
+  target_link_libraries(mqgmpi ${ALL_EXEC_LIBS} ${MPI_CXX_LIBRARIES})
+  install(TARGETS mqgmpi RUNTIME DESTINATION bin)
+  set_target_properties(mqgmpi PROPERTIES INSTALL_RPATH "${MNTR_INSTALL_RPATH}")
 endif()
 
 install(FILES ${ENGFAC_HEADERS} DESTINATION include/minotaur)
