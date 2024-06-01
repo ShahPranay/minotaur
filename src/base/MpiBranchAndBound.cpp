@@ -37,8 +37,7 @@ void MpiBranchAndBound::collectData_()
 {
   int ismsg = 0;
   double value;
-  while(true)
-  {
+  while (true) {
     MPI_Status status;
     MPI_Iprobe(MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &ismsg, &status);
     if (!ismsg)
@@ -244,7 +243,7 @@ void MpiBranchAndBound::solve()
   }
   tm_->setUb(solPool_->getBestSolutionValue());
 
-  if (mpirank_ == 0){
+  if (mpirank_ == 0) {
     // do the root
     current_node = processRoot_(&should_prune, &dived_prev);
 
@@ -273,8 +272,7 @@ void MpiBranchAndBound::solve()
         << me_ << "ub = " << tm_->getUb() << std::endl;
 #endif
     }
-  }
-  else{
+  } else {
     if (options_->createRoot == true) {
       nodeRlxr_->createRootRelaxation(current_node, should_prune)->setProblem(problem_);
     }
@@ -284,17 +282,16 @@ void MpiBranchAndBound::solve()
   int times_balanced = 0, itr_since_last_balance = 0;
 
   // solve root outside the loop. save the useful information.
-  while(!all_finished_) {
+  while (!all_finished_) {
     collectData_();
 
-    if (shouldStop_() || !current_node || itr_since_last_balance == lb_frequency_)
-    {
+    if (shouldStop_() || !current_node || itr_since_last_balance == lb_frequency_) {
       times_balanced += 1;
       current_node = LoadBalance_(current_node);
       itr_since_last_balance = 0;
     }
 
-    if(!current_node)
+    if (!current_node)
       continue;
 
     itr_since_last_balance++;
